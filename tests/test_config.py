@@ -119,7 +119,7 @@ def test_secret_fields_are_secretstr_and_never_serialized() -> None:
     """Secrets are typed ``SecretStr`` and never appear in plaintext output."""
     settings = Settings(
         llm_openai_api_key="sk-test-value-123",
-        blob_secret_key="super-secret-value-456",
+        blob_secret_key="super-secret-value-456",  # noqa: S106 - fake fixture value, asserted never serialized
     )
     assert isinstance(settings.llm_openai_api_key, SecretStr)
     assert settings.llm_openai_api_key.get_secret_value() == "sk-test-value-123"
