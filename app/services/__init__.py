@@ -19,6 +19,13 @@ Current implementation:
   (text bounds + confidence range mirrored from the ``statements`` table).
 - ``extractor``   — passage -> draft statements + evidence links via the cheap
   tier (G-01 data/instruction separation, G-05 redaction, G-11 rollback).
+- ``plan_schema`` — Pydantic boundary contract for the research-plan LLM
+  output (>=3 non-empty bounded sub-questions; bounded hypothesis and hint
+  lists; descriptions surfaced into model_json_schema for G-01 prompting).
+- ``planner``     — STORM-style multi-perspective planning: cheap tier +
+  deterministic prompt template -> persisted ``research_plan:{run_id}``
+  artifact with a 30-day TTL (G-01 data/instruction separation, G-05
+  redaction, G-11 quarantine without partial persist).
 
-Planned: verification, contradiction detection, planning, report generation.
+Planned: verification, contradiction detection, report generation.
 """
