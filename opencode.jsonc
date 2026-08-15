@@ -1,0 +1,79 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "orchestrator",
+
+  // Instructions injected into ALL agents' system prompts
+  // Canonical source: .agents/rules/ — universal operational protocols
+  "instructions": [
+    ".opencode/rules/global.md",
+    ".opencode/rules/agent-lifecycle.md",
+    ".opencode/rules/result-message.md",
+    ".opencode/rules/error-handling.md",
+    ".opencode/rules/tool-call-lifecycle.md",
+    ".opencode/rules/memory-protocol.md",
+    ".opencode/rules/context-protocol.md"
+  ],
+
+  // Skill discovery paths
+  "skills": {
+    "paths": [
+      ".opencode/skills"
+    ]
+  },
+
+  // Plugin-based observability (tool call logging + trace instrumentation)
+  "plugin": [
+    "audit-logger",
+    "trace-recorder"
+  ],
+
+  // MCP servers
+  "mcp": {
+    "github": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "enabled": true,
+      "environment": {
+        "GITHUB_TOKEN": "{env:GITHUB_TOKEN}"
+      }
+    },
+    "figma": {
+      "type": "remote",
+      "url": "https://mcp.figma.com/mcp",
+      "enabled": true,
+      "oauth": {}
+    },
+    "postgres": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "{env:DATABASE_AUTH_URL}"
+      ],
+      "enabled": true
+    },
+    "docker": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "mcp-docker-server"
+      ],
+      "enabled": true
+    },
+    "kubernetes": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "kubernetes-mcp-server"
+      ],
+      "enabled": true
+    }
+  }
+}

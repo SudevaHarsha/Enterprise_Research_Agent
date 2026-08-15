@@ -1,0 +1,63 @@
+name: ecrke
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ecrke}
+      POSTGRES_USER: ${POSTGRES_USER:-ecrke}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ecrke_dev}
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ecrke} -d ${POSTGRES_DB:-ecrke}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  prefect-server:
+    image: prefecthq/prefect:3-latest
+    command: prefect server start
+    environment:
+      PREFECT_API_DATABASE_CONNECTION_URL: ${PREFECT_API_DATABASE_CONNECTION_URL:-postgresql+asyncpg://ecrke:ecrke_dev@postgres:5432/ecrke_prefect}
+      PREFECT_SERVER_API_HOST: 0.0.0.0
+    ports:
+      - "4200:4200"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://ecrke:ecrke_dev@postgres:5432/ecrke}
+      APP_ENV: ${APP_ENV:-development}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: prefect worker start --pool research
+    environment:
+      PREFECT_API_URL: http://prefect-server:4200/api
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://ecrke:ecrke_dev@postgres:5432/ecrke}
+    depends_on:
+      prefect-server:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
