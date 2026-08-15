@@ -15,7 +15,10 @@ Current implementation:
   optional behind the ``[s3]`` extra).
 - ``collectors``   — search (provider-agnostic), RSS/Atom, and direct-URL
   connectors that write ``sources`` + ``passages`` rows.
+- ``statement_schema`` — Pydantic boundary contract for LLM statement output
+  (text bounds + confidence range mirrored from the ``statements`` table).
+- ``extractor``   — passage -> draft statements + evidence links via the cheap
+  tier (G-01 data/instruction separation, G-05 redaction, G-11 rollback).
 
-Planned: retrieval, extraction, verification, contradiction detection,
-planning, report generation.
+Planned: verification, contradiction detection, planning, report generation.
 """
