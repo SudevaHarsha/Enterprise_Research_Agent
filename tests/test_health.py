@@ -29,6 +29,6 @@ def test_readyz_reports_readiness_and_version() -> None:
 
 
 def test_health_router_mounted_on_app() -> None:
-    paths = {route.path for route in app.routes}
-    assert "/healthz" in paths
-    assert "/readyz" in paths
+    schema = app.openapi()
+    assert "/healthz" in schema["paths"]
+    assert "/readyz" in schema["paths"]
