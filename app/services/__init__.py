@@ -48,6 +48,15 @@ Current implementation:
   skip of already-confirmed pairs; ``detect`` returns confirmed rows for the
   Step 14 gold-set recall hook; emits a contradiction.detect span + metrics log
   line (G-01 prompt separation, G-05 redaction, G-11 quarantine).
-
-Planned: report generation.
+- ``report_renderer`` — pure report contract (``Report`` / ``ReportConclusion``
+  with support matrix + evidence statements) and deterministic markdown/JSON
+  renderers; no DB or LLM coupling.
+- ``report_generator`` — report stage: synthesizes conclusions from verified
+  statements + confirmed contradictions ONLY via the strong tier (G-01
+  delimited data blocks, G-05 redaction, ``use_cache=False``, G-11
+  quarantine -> no rows), applies deterministic one-sidedness (source-domain
+  diversity) and high-stakes human-review checks, and atomically persists
+  conclusions + conclusion_evidence links (every conclusion cites >=1
+  statement) + audit verdict rows (action='conclude') in ONE transaction;
+  emits a report.generate span + metrics log line.
 """
