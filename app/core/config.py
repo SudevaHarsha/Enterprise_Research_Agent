@@ -70,14 +70,25 @@ class Settings(BaseSettings):
     # Search / retrieval
     search_api_provider: str = ""
     search_api_key: SecretStr | None = None
+    # Canonical provider selector (SEARCH_PROVIDER); falls back to the legacy
+    # SEARCH_API_PROVIDER field when unset. Supported: mock, brave, serpapi.
+    search_provider: str = ""
+    search_results_limit: int = 10
     # Comma-separated; parsed by the egress allowlist (task_005)
     allowed_domains: str = ""
+
+    # Fetching (G-06 egress sandbox; task_005)
+    fetch_min_interval_seconds: float = 1.0
+    fetch_timeout_seconds: float = 30.0
 
     # Blob storage (S3-compatible) — keys are secrets
     blob_endpoint: str = ""
     blob_bucket: str = ""
     blob_access_key: SecretStr | None = None
     blob_secret_key: SecretStr | None = None
+    # Content-addressed raw-source store: "local" (default) or "s3" (optional)
+    blob_store_backend: str = "local"
+    blob_store_dir: str = ".blobs"
 
     # Run governance
     run_budget_usd: float = 2.0
