@@ -38,6 +38,16 @@ Current implementation:
   (method='verify', never touching the extractor's link) plus an audit verdict
   row in ONE atomic transaction; idempotent unless force=True; emits a
   support-ratio metric (span + log).
+- ``contradiction_detector`` — flag-first / confirm-second detection among
+  verified statements: deterministic $0 candidate pruning (content-token
+  Jaccard threshold + negation markers, G-03), strong-tier flag judge, then a
+  deterministic negation signal (shared-core, one-sided negation) or a second
+  strong-tier confirm judge -> confirmed|rejected; ``contradictions`` rows
+  (status='confirmed', confirmed_at, evidence) + atomic ``audit_trace`` verdict
+  rows written ONLY on confirmed, never flagged-only/rejected; idempotent
+  skip of already-confirmed pairs; ``detect`` returns confirmed rows for the
+  Step 14 gold-set recall hook; emits a contradiction.detect span + metrics log
+  line (G-01 prompt separation, G-05 redaction, G-11 quarantine).
 
-Planned: contradiction detection, report generation.
+Planned: report generation.
 """
