@@ -26,6 +26,18 @@ Current implementation:
   deterministic prompt template -> persisted ``research_plan:{run_id}``
   artifact with a 30-day TTL (G-01 data/instruction separation, G-05
   redaction, G-11 quarantine without partial persist).
+- ``support_matrix`` — deterministic, $0 lexical support scorer mapping
+  statement<->passage token overlap to ``EvidenceScore`` full|partial|none
+  with a numeric ratio in [0, 1] (verify-first gate stage 1).
+- ``audit_writer`` — insert-only ``audit_trace`` writer that participates in
+  the caller's transaction (no commit) or owns one (G-05 redaction, bounded
+  validation, append-only governance).
+- ``verifier``     — verify-first gate: deterministic support matrix first,
+  then strong-tier LLM judge confirmation (structured ``VerificationVerdict``)
+  -> draft -> verified|quarantined, appending a NEW append-only evidence link
+  (method='verify', never touching the extractor's link) plus an audit verdict
+  row in ONE atomic transaction; idempotent unless force=True; emits a
+  support-ratio metric (span + log).
 
-Planned: verification, contradiction detection, report generation.
+Planned: contradiction detection, report generation.
 """
