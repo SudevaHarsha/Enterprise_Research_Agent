@@ -189,7 +189,9 @@ def test_openapi_renders_all_ten_v1_paths() -> None:
 def test_create_run_creates_row_and_returns_id(api: tuple[TestClient, FakeSessionFactory]) -> None:
     client, factory = api
     seed_tenant(factory.storage)
-    response = client.post("/v1/runs", json={"question": "How is AI transforming retail?"})
+    response = client.post(
+        "/v1/runs", json={"question": "How is AI transforming retail?", "execute": False}
+    )
     assert response.status_code == 201
     body = response.json()
     assert body["status"] == "submitted"

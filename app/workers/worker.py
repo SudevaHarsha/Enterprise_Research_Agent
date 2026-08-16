@@ -16,12 +16,10 @@ serialize it for ``prefect deploy`` style workflows.
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 
 import yaml
 from prefect.deployments.runner import RunnerDeployment
-
-from app.pipeline.flows import research_pipeline
 
 FLOW_NAME = "research-pipeline"
 WORK_POOL_NAME = "research"
@@ -41,18 +39,31 @@ def deploy_research_pipeline() -> RunnerDeployment:
     Binds the ``research-pipeline`` flow to the ``research`` work pool. The
     worker polls that pool's queue, which is persisted in Prefect's Postgres
     database (no Redis required).
+
+    The deployment is constructed directly rather than via
+    ``research_pipeline.to_deployment``: for an async flow that API returns an
+    awaitable when called inside a running event loop (which made the sync
+    ``deploy_research_pipeline`` contract fragile), and it derives the
+    entrypoint from the installed module path, which resolves inside the worker
+    image to a broken ``site-packages`` path. The ``path``/``entrypoint`` pair
+    is pinned to the repo layout inside the container — both images run with
+    ``WORKDIR /app``, so an absolute ``path`` of ``/app`` plus the repo-relative
+    entrypoint loads ``app/pipeline/flows.py`` (fresh-clone DoD findings).
     """
-    # ``to_deployment`` is typed as awaitable for async flows, but Prefect 3
-    # builds the RunnerDeployment synchronously; the cast matches runtime.
-    return cast(
-        RunnerDeployment,
-        research_pipeline.to_deployment(
-            name=DEPLOYMENT_NAME,
-            work_pool_name=WORK_POOL_NAME,
-            tags=list(DEPLOYMENT_TAGS),
-            description=DEPLOYMENT_DESCRIPTION,
-        ),
+    deployment = RunnerDeployment(
+        name=DEPLOYMENT_NAME,
+        flow_name=FLOW_NAME,
+        entrypoint="app/pipeline/flows.py:research_pipeline",
+        work_pool_name=WORK_POOL_NAME,
+        tags=list(DEPLOYMENT_TAGS),
+        description=DEPLOYMENT_DESCRIPTION,
     )
+    # ``_path`` is the private attr serialized into the deployment's ``path``
+    # column (working directory for the flow run). It must be absolute for a
+    # local filesystem deployment; the worker CWDs there before importing the
+    # entrypoint.
+    deployment._path = "/app"
+    return deployment
 
 
 def deployment_to_yaml(deployment: RunnerDeployment) -> str:

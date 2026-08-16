@@ -16,32 +16,22 @@ worker then executes the durable, checkpointed flow (design doc §14).
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Annotated, Protocol, cast
+from datetime import UTC, datetime
+from typing import Annotated, Protocol
 from uuid import UUID
 
 from fastapi import Depends
 from prefect.client.orchestration import PrefectClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
+from app.db.enums import RunStatus
+from app.db.models import AuditTrace, Run
 from app.db.session import async_session_factory
 from app.pipeline.context import PipelineServices, SessionFactory
+from app.pipeline.factory import build_pipeline_services
 from app.pipeline.flows import research_pipeline, resume_pipeline
-from app.services.allowlist import Allowlist
-from app.services.audit_writer import AuditWriter
-from app.services.blob_store import make_blob_store
-from app.services.collectors.search import SearchConnector
-from app.services.contradiction_detector import ContradictionDetector
-from app.services.cost_meter import CostMeter
-from app.services.extractor import Extractor
-from app.services.fetcher import Fetcher
-from app.services.kv_cache import KVCache
-from app.services.llm_gateway import LLMGateway
-from app.services.normalizer import Normalizer
-from app.services.planner import Planner
-from app.services.report_generator import ReportGenerator
-from app.services.verifier import Verifier
+from app.services.normalizer import redact_secrets
 from app.workers.worker import DEPLOYMENT_NAME, FLOW_NAME
 
 logger = get_logger("app.api.deps")
@@ -54,42 +44,6 @@ def _make_prefect_client(api_url: str) -> PrefectClient:
     in-memory stand-in (hermetic contract — no real Prefect server).
     """
     return PrefectClient(api=api_url)
-
-
-def build_pipeline_services(
-    settings: Settings, session_factory: SessionFactory
-) -> PipelineServices:
-    """Build the full Phase-1 service bundle (composition root).
-
-    ``KVCache``/``CostMeter``/``Planner`` declare their factory parameter as
-    ``async_sessionmaker``, while the API hands them a bare ``SessionFactory``
-    callable. The cast is structural — the runtime object is callable either
-    way — and keeps mypy clean.
-    """
-    maker = cast(async_sessionmaker[AsyncSession], session_factory)
-    cache = KVCache(session_factory=maker)
-    meter = CostMeter(session_factory=maker)
-    gateway = LLMGateway(settings=settings, cache=cache, meter=meter)
-    return PipelineServices(
-        settings=settings,
-        session_factory=session_factory,
-        cache=cache,
-        meter=meter,
-        gateway=gateway,
-        planner=Planner(gateway=gateway, session_factory=maker),
-        allowlist=Allowlist.from_settings(settings),
-        search_connector=SearchConnector.from_settings(settings),
-        fetcher=Fetcher.from_settings(settings),
-        blob_store=make_blob_store(settings),
-        normalizer=Normalizer(),
-        extractor=Extractor(gateway=gateway, session_factory=session_factory),
-        verifier=Verifier(gateway=gateway, session_factory=session_factory),
-        contradiction_detector=ContradictionDetector(
-            gateway=gateway, session_factory=session_factory
-        ),
-        report_generator=ReportGenerator(gateway=gateway, session_factory=session_factory),
-        audit_writer=AuditWriter(session_factory=session_factory),
-    )
 
 
 class PipelineRunner(Protocol):
@@ -141,6 +95,39 @@ class DefaultPipelineRunner:
         """True when the runner should hand runs to the Prefect worker queue."""
         return bool(self._settings.prefect_api_url)
 
+    async def _persist_start_failure(self, run_id: UUID | str, reason: str) -> None:
+        """Persist a terminal ``failed`` state when a run could not start.
+
+        The durable run row is the observable contract: if the pipeline can
+        never start (unconfigured SEARCH_PROVIDER/LLM keys, worker submission
+        error), the run must transition out of ``submitted`` so an evaluator
+        never sees a permanently-stuck run (DoD finding from task_015
+        verification). Only rows still in ``submitted`` are transitioned — a
+        flow that already persisted its own terminal state is left untouched,
+        so no duplicate audit rows are ever written.
+        """
+        try:
+            async with self._session_factory() as session:
+                db_run = await session.get(Run, run_id)
+                if db_run is None or db_run.status != RunStatus.SUBMITTED.value:
+                    return
+                db_run.status = RunStatus.FAILED.value
+                db_run.updated_at = datetime.now(UTC)
+                session.add(
+                    AuditTrace(
+                        run_id=db_run.id,
+                        entity_type="run",
+                        entity_id=str(db_run.id),
+                        action="run.failed",
+                        actor="pipeline",
+                        decision="failed",
+                        reason=redact_secrets(str(reason))[:2000],
+                    )
+                )
+                await session.commit()
+        except Exception as exc:  # pragma: no cover - defensive; never mask start failure
+            logger.error("pipeline_failure_persist_error run_id=%s reason=%s", run_id, exc)
+
     async def _submit(self, run_id: UUID | str) -> str:
         """Submit a run to the deployed worker (``research-pipeline/research-worker``).
 
@@ -162,6 +149,7 @@ class DefaultPipelineRunner:
             return state_name or "unknown"
         except Exception as exc:
             logger.error("pipeline_submit_failed run_id=%s reason=%s", run_id, exc)
+            await self._persist_start_failure(run_id, str(exc))
             return "failed"
 
     async def run(
@@ -175,6 +163,7 @@ class DefaultPipelineRunner:
             services = services or self._build_services(self._settings, self._session_factory)
         except Exception as exc:
             logger.error("pipeline_run_unavailable run_id=%s reason=%s", run_id, exc)
+            await self._persist_start_failure(run_id, str(exc))
             return "failed"
         try:
             return await research_pipeline(run_id, services)

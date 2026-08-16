@@ -11,6 +11,8 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # Creates the `ecrke_prefect` database on first boot (fresh volume)
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/01-create-prefect-db.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ecrke} -d ${POSTGRES_DB:-ecrke}"]
       interval: 5s
@@ -25,9 +27,29 @@ services:
       PREFECT_SERVER_API_HOST: 0.0.0.0
     ports:
       - "4200:4200"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import httpx; httpx.get('http://localhost:4200/api/health', timeout=2).raise_for_status()\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     depends_on:
       postgres:
         condition: service_healthy
+
+  # Schema migration + seed (task_015 DoD fix): a fresh clone has an empty DB;
+  # this one-shot service runs `alembic upgrade head` (which also seeds the
+  # `default` tenant via the seed_default_tenant migration) and exits 0.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: alembic upgrade head
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://ecrke:ecrke_dev@postgres:5432/ecrke}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
   api:
     build:
@@ -37,13 +59,42 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://ecrke:ecrke_dev@postgres:5432/ecrke}
       APP_ENV: ${APP_ENV:-development}
+      SEARCH_PROVIDER: ${SEARCH_PROVIDER:-mock}
+      # API submits runs to the Prefect server; the worker executes them
+      # (jobs-not-requests). Without this the runner falls back to an
+      # in-process ephemeral Prefect server, which is not reliable in a
+      # container (DoD finding).
+      PREFECT_API_URL: http://prefect-server:4200/api
     ports:
-      - "8000:8000"
+      - "3456:8000"
     volumes:
       - ./app:/app/app
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      register:
+        condition: service_completed_successfully
+
+  # One-shot deployment registration: applies research-pipeline/research-worker
+  # to the `research` work pool so the worker can actually pick up submitted
+  # runs (fresh-clone DoD fix).
+  register:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python scripts/register_deployment.py
+    environment:
+      PREFECT_API_URL: http://prefect-server:4200/api
+    depends_on:
+      prefect-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
 
   worker:
     build:
@@ -53,11 +104,16 @@ services:
     environment:
       PREFECT_API_URL: http://prefect-server:4200/api
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://ecrke:ecrke_dev@postgres:5432/ecrke}
+      SEARCH_PROVIDER: ${SEARCH_PROVIDER:-mock}
     depends_on:
       prefect-server:
         condition: service_started
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      register:
+        condition: service_completed_successfully
 
   # Observability stack (task_013, design doc §14): Prometheus scrapes the API
   # metrics endpoint; Grafana is provisioned with the ECRKE dashboard. Only

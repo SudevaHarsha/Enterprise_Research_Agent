@@ -8,7 +8,7 @@
 >
 > **A — Docker stack** (needs Docker daemon): `docker compose up -d` then
 > `docker compose --profile observability up -d` (optional). API at
-> `http://localhost:8000`.
+> `http://localhost:3456`.
 >
 > **B — Local dev**: `docker compose up -d postgres`, `.\scripts\dev.ps1 setup`,
 > `.\scripts\dev.ps1 verify`, then start the API
@@ -19,8 +19,8 @@
 > header used for every call.
 
 ```powershell
-$T = @{ "X-Tenant-ID" = "00000000-0000-0000-0000-000000000001" }
-$BASE = "http://localhost:8000"
+$T = @{ "X-Tenant-ID" = "default" }
+$BASE = "http://localhost:3456"
 ```
 
 ---

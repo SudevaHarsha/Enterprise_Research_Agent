@@ -435,6 +435,15 @@ async def test_kill_mid_run_then_resume_skips_checkpointed_stages(prefect_harnes
     with pytest.raises(RuntimeError, match="simulated kill"):
         await research_pipeline(harness.run.id, harness.services)
     assert harness.run.status == "failed"
+    # the failure is appended to the immutable audit trail (worker-mode parity:
+    # the flow's failure handler writes run.failed, not just the API submit path)
+    failed_audit = [
+        a for a in rows_of(harness.factory.storage, AuditTrace) if a.action == "run.failed"
+    ]
+    assert len(failed_audit) == 1
+    assert failed_audit[0].actor == "pipeline"
+    assert failed_audit[0].decision == "failed"
+    assert failed_audit[0].entity_type == "run"
     completed = {cp.stage for cp in rows_of(harness.factory.storage, Checkpoint)}
     assert completed == {"define", "search", "collect", "store", "extract"}
     counts_before = {

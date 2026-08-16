@@ -241,7 +241,10 @@ def test_g09_validation_error_is_rfc7807_problem_details(
 def test_g10_post_runs_creates_durable_observable_run(eval_api_client: Any) -> None:
     client, factory = eval_api_client
     seed_tenant(factory.storage)
-    created = client.post("/v1/runs", json={"question": "How is AI transforming retail?"})
+    created = client.post(
+        "/v1/runs",
+        json={"question": "How is AI transforming retail?", "execute": False},
+    )
     assert created.status_code == 201
     body = created.json()
     assert body["status"] == "submitted"

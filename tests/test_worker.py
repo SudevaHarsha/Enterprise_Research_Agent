@@ -21,6 +21,40 @@ def test_deploy_research_pipeline_builds_deployment() -> None:
     assert deployment.work_pool_name == "research"
     assert deployment.tags  # non-empty tags
     assert deployment.description  # non-empty description
+    # Entrypoint is pinned to the repo-relative script path so the worker can
+    # load the flow inside the container (pip-installed module paths break).
+    assert deployment.entrypoint == "app/pipeline/flows.py:research_pipeline"
+    # Absolute working directory for local filesystem deployments (worker CWDs
+    # there before importing the entrypoint).
+    assert deployment._path == "/app"
+
+
+def test_deployment_applies_to_prefect_server(prefect_harness: object) -> None:
+    """The registration bootstrap (compose ``register`` service) actually lands
+    the deployment on the server so the worker can pick runs up (DoD fix)."""
+    import asyncio
+
+    from prefect.client.orchestration import get_client
+    from prefect.client.schemas.actions import WorkPoolCreate
+
+    async def _register() -> None:
+        async with get_client() as client:
+            pools = await client.read_work_pools()
+            pool = next((p for p in pools if p.name == worker.WORK_POOL_NAME), None)
+            if pool is None:
+                await client.create_work_pool(
+                    WorkPoolCreate(name=worker.WORK_POOL_NAME, type="process")
+                )
+            deployment = worker.deploy_research_pipeline()
+            deployment_id = await deployment.apply(work_pool_name=worker.WORK_POOL_NAME)
+            assert deployment_id is not None
+            fetched = await client.read_deployment_by_name(
+                f"{worker.FLOW_NAME}/{worker.DEPLOYMENT_NAME}"
+            )
+            assert fetched is not None
+            assert fetched.name == worker.DEPLOYMENT_NAME
+
+    asyncio.run(_register())
 
 
 def test_deployment_yaml_round_trips() -> None:

@@ -58,7 +58,7 @@ docker compose --profile observability up -d   # + prometheus + grafana
 
 | Service | Host URL | Notes |
 |---|---|---|
-| API | http://localhost:8000 | OpenAPI docs at `/docs`, health at `/healthz` |
+| API | http://localhost:3456 | OpenAPI docs at `/docs`, health at `/healthz` |
 | Prefect server | http://localhost:4200 | Flow/run UI (set `PREFECT_API_URL` to use it) |
 | Prometheus | http://localhost:9090 | Scrapes `/metrics` (observability profile) |
 | Grafana | http://localhost:3000 | Provisioned ECRKE dashboard (observability profile) |
@@ -88,14 +88,14 @@ cross-tenant access). Errors follow RFC 7807 Problem Details.
 ```powershell
 # 1. submit (execute=true runs the pipeline in the background)
 $body = '{"question":"How is AI transforming retail operations?","execute":true,"cost_budget_usd":2.0}'
-$run = Invoke-RestMethod -Method Post -Uri http://localhost:8000/v1/runs -Headers @{ "X-Tenant-ID" = "00000000-0000-0000-0000-000000000001" } -ContentType "application/json" -Body $body
+$run = Invoke-RestMethod -Method Post -Uri http://localhost:3456/v1/runs -Headers @{ "X-Tenant-ID" = "default" } -ContentType "application/json" -Body $body
 
 # 2. poll the lifecycle
-Invoke-RestMethod -Uri "http://localhost:8000/v1/runs/$($run.run_id)" -Headers @{ "X-Tenant-ID" = "00000000-0000-0000-0000-000000000001" }
+Invoke-RestMethod -Uri "http://localhost:3456/v1/runs/$($run.run_id)" -Headers @{ "X-Tenant-ID" = "default" }
 
 # 3. read conclusions and trace one back to its source
-Invoke-RestMethod -Uri "http://localhost:8000/v1/runs/$($run.run_id)/conclusions" -Headers @{ "X-Tenant-ID" = "00000000-0000-0000-0000-000000000001" }
-Invoke-RestMethod -Uri "http://localhost:8000/v1/statements/<statement_id>/trace" -Headers @{ "X-Tenant-ID" = "00000000-0000-0000-0000-000000000001" }
+Invoke-RestMethod -Uri "http://localhost:3456/v1/runs/$($run.run_id)/conclusions" -Headers @{ "X-Tenant-ID" = "default" }
+Invoke-RestMethod -Uri "http://localhost:3456/v1/statements/<statement_id>/trace" -Headers @{ "X-Tenant-ID" = "default" }
 ```
 
 See [`demo-script.md`](demo-script.md) for a full walkthrough with sample

@@ -8,8 +8,10 @@ crashed or budget-paused run picks up exactly where it stopped.
 Observability: before each stage the ``runs`` row is updated (stage, status,
 progress); after each stage a checkpoint is saved and the ``run.checkpoint``
 mirror is refreshed. A cost breach pauses the run and emits the
-``circuit_breaker_open`` alert; any other failure marks the run ``failed``
-and re-raises.
+``circuit_breaker_open`` alert; any other failure appends an immutable
+``run.failed`` audit row (G-05 redacted), marks the run ``failed``, and
+re-raises — so the failure is observable in the audit trail in both
+worker-executed and in-process modes.
 
 task_013 (build-plan Step 13): the flow ALSO emits structured JSONL lifecycle
 events (``app.pipeline.events``) and records Prometheus metrics
@@ -30,9 +32,11 @@ from uuid import UUID
 from prefect import flow
 
 from app.core import metrics
+from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.core.telemetry import get_tracer
-from app.db.models import Run
+from app.db.models import AuditTrace, Run
+from app.db.session import async_session_factory
 from app.pipeline.checkpoint import CheckpointStore
 from app.pipeline.circuit_breaker import CircuitBreaker, CircuitBreakerError
 from app.pipeline.context import (
@@ -49,6 +53,7 @@ from app.pipeline.events import (
     emit_stage_completed,
     emit_stage_started,
 )
+from app.pipeline.factory import build_pipeline_services
 from app.pipeline.stages import (
     run_collect,
     run_conclude,
@@ -61,6 +66,7 @@ from app.pipeline.stages import (
     run_trace,
     run_verify,
 )
+from app.services.normalizer import redact_secrets
 
 logger = get_logger("app.pipeline.flows")
 _tracer = get_tracer("ecrke")
@@ -149,6 +155,17 @@ async def _execute_stages(ctx: PipelineContext) -> str:
             run = await session.get(Run, ctx.run_id)
             if run is not None:
                 run.status = "failed"
+                session.add(
+                    AuditTrace(
+                        run_id=run.id,
+                        entity_type="run",
+                        entity_id=str(run.id),
+                        action="run.failed",
+                        actor="pipeline",
+                        decision="failed",
+                        reason=redact_secrets(str(exc))[:2000],
+                    )
+                )
                 await session.commit()
         await _record_run_cost(ctx)
         emit_run_failed(ctx.run_id, error=str(exc))
@@ -177,12 +194,22 @@ async def _record_run_cost(ctx: PipelineContext) -> None:
 
 
 @flow(name="research-pipeline")
-async def research_pipeline(run_id: UUID | str, services: PipelineServices) -> str:
-    """Execute the research DAG, skipping stages with durable checkpoints."""
+async def research_pipeline(run_id: UUID | str, services: PipelineServices | None = None) -> str:
+    """Execute the research DAG, skipping stages with durable checkpoints.
+
+    ``services`` is optional for worker-mode execution: a deployed flow run
+    carries only ``run_id``, so the flow builds the Phase-1 bundle from the
+    environment (composition root in ``app.pipeline.factory``). Direct calls
+    (hermetic tests, in-process runner) pass an explicit bundle.
+    """
+    if services is None:
+        services = build_pipeline_services(get_settings(), async_session_factory)
     return await _execute_stages(PipelineContext(run_id=run_id, services=services))
 
 
 @flow(name="research-pipeline-resume")
-async def resume_pipeline(run_id: UUID | str, services: PipelineServices) -> str:
+async def resume_pipeline(run_id: UUID | str, services: PipelineServices | None = None) -> str:
     """Re-enter the pipeline; checkpointed stages are skipped automatically."""
+    if services is None:
+        services = build_pipeline_services(get_settings(), async_session_factory)
     return await research_pipeline(run_id, services)

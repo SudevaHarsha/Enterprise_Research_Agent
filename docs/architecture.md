@@ -199,8 +199,8 @@ The provenance core — 14 tables (see `docs/data-model.md`). Highlights:
 ## 5. Deployment shape
 
 - `docker-compose.yml` (compose project `ecrke`): `postgres` (host port 5433),
-  `prefect-server` (4200), `api` (8000), `worker`; the `observability` profile
-  adds `prometheus` (9090) and `grafana` (3000).
+  `prefect-server` (4200), `api` (host 3456 → container 8000), `worker`; the
+  `observability` profile adds `prometheus` (9090) and `grafana` (3000).
 - CI (`.github/workflows/ci.yml`): lint/typecheck, tests, hermetic eval gate,
   image build. No push to production happens without human approval
   (Ironclad Rule 03).

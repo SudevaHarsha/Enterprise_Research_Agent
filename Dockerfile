@@ -9,6 +9,9 @@ WORKDIR /app
 # Install project + dependencies first for layer caching
 COPY pyproject.toml README.md ./
 COPY app ./app
+COPY scripts ./scripts
+COPY alembic.ini ./
+COPY alembic ./alembic
 RUN pip install --upgrade pip && pip install .
 
 # Non-root user
