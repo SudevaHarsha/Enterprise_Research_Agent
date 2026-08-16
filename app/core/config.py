@@ -58,7 +58,9 @@ class Settings(BaseSettings):
     prefect_api_database_connection_url: str = (
         "postgresql+asyncpg://ecrke:ecrke_dev@localhost:5433/ecrke_prefect"
     )
-    prefect_api_url: str = "http://localhost:4200/api"
+    # Empty by default: the pipeline runner stays in-process unless the
+    # operator explicitly sets PREFECT_API_URL (task_013 submission mode).
+    prefect_api_url: str = ""
 
     # LLM providers — keys are secrets; set by NAME via env only
     llm_openai_api_key: SecretStr | None = None

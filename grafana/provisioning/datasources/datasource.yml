@@ -1,0 +1,12 @@
+# ECRKE Grafana datasource provisioning (task_013, design doc §14).
+# The uid "prometheus" is referenced by grafana/dashboard.json panels.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

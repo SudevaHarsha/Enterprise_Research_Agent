@@ -1,0 +1,11 @@
+# ECRKE Prometheus scrape config (task_013, design doc §14).
+# Scrapes the API's Prometheus exposition endpoint every 15s.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: ecrke
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["api:8000"]

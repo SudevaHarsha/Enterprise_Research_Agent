@@ -59,5 +59,37 @@ services:
       postgres:
         condition: service_healthy
 
+  # Observability stack (task_013, design doc §14): Prometheus scrapes the API
+  # metrics endpoint; Grafana is provisioned with the ECRKE dashboard. Only
+  # started on demand: docker compose --profile observability up.
+  prometheus:
+    image: prom/prometheus
+    profiles: ["observability"]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      api:
+        condition: service_started
+
+  grafana:
+    image: grafana/grafana
+    profiles: ["observability"]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-ecrke_grafana}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboard.json:/var/lib/grafana/dashboards/dashboard.json:ro
+    depends_on:
+      prometheus:
+        condition: service_started
+
 volumes:
   pgdata:

@@ -22,6 +22,7 @@ from fastapi.responses import JSONResponse
 
 from app import __version__
 from app.api.health import router as health_router
+from app.api.metrics import router as metrics_router
 from app.api.routes import router as api_router
 from app.api.schemas import ErrorDetail
 from app.core.logging import configure_logging
@@ -87,6 +88,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     app.include_router(health_router)
+    app.include_router(metrics_router)
     app.include_router(api_router)
     _register_exception_handlers(app)
 
