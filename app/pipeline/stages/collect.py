@@ -1,9 +1,11 @@
-"""Stage 3 — collect: allowlist-gate, fetch, blob-store, and record sources.
+"""Stage 3 — collect: allowlist-gate, fetch, safety-filter, blob-store, record.
 
 Per candidate URI from the search checkpoint:
 
 - denied by the allowlist (G-06 default-deny) -> ``quarantined`` source + audit
 - fetch failure -> ``failed`` source + audit
+- fetched but unsafe content (G-04 heuristic filter) -> ``quarantined`` source
+  + audit, no blob write
 - fetched -> raw bytes stored in the blob store, ``fetched`` source + audit
 
 URIs already collected for the run are skipped (idempotent resume). ``raw_ref``
@@ -22,8 +24,19 @@ from app.db.models import Source
 from app.pipeline.checkpoint import CheckpointStore
 from app.pipeline.context import PipelineContext, StageResult
 from app.services.allowlist import AllowlistDeniedError
+from app.services.content_filter import is_unsafe, unsafe_reason
 from app.services.fetcher import FetchError
 from app.services.normalizer import classify_source, content_hash
+
+
+def _decode_content(content: bytes) -> str:
+    """Best-effort bytes -> text for the safety filter (never raises)."""
+    for encoding in ("utf-8", "utf-16", "latin-1"):
+        try:
+            return content.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return content.decode("utf-8", errors="replace")
 
 
 async def _record_source(
@@ -120,6 +133,21 @@ async def run_collect(ctx: PipelineContext) -> StageResult:
                 reason=str(exc),
             )
             failed += 1
+            continue
+        decoded = _decode_content(fetched_content.content)
+        if is_unsafe(decoded):
+            await _record_source(
+                ctx,
+                uri=uri,
+                source_type=classify_source(fetched_content.content_type, uri).value,
+                status="quarantined",
+                allowlisted=True,
+                content_hash_value=content_hash(fetched_content.content),
+                action="source.quarantined",
+                decision="quarantined",
+                reason=unsafe_reason(decoded),
+            )
+            quarantined += 1
             continue
         source_id = uuid4()
         raw_ref = f"runs/{ctx.run_id}/sources/{source_id}"

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Retail Operations Feed</title>
+    <link>https://retail.example.com/feed</link>
+    <description>ECRKE sample source feed - fictional research material.</description>
+    <item>
+      <title>Retail Operations Report</title>
+      <link>https://retail.example.com/reports/retail-operations</link>
+      <description>Retailers report stronger same-store sales growth as e-commerce expands its share of total retail spending.</description>
+    </item>
+    <item>
+      <title>Inventory Forecasting Update</title>
+      <link>https://retail.example.com/reports/inventory-forecasting</link>
+      <description>AI demand forecasting lowers retail inventory carrying costs by improving demand prediction accuracy.</description>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,330 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 4 0 R 5 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 6 0 R /F2 7 0 R >> >> /Contents 10 0 R >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 6 0 R /F2 7 0 R >> >> /Contents 11 0 R >>
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 6 0 R /F2 7 0 R >> >> /Contents 12 0 R >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding /ToUnicode 8 0 R >>
+endobj
+7 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding /ToUnicode 9 0 R >>
+endobj
+8 0 obj
+<< /Length 1461 >>
+stream
+/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def
+/CMapName /Adobe-Identity-UCS def
+/CMapType 2 def
+1 begincodespacerange
+<00> <FF>
+endcodespacerange
+95 beginbfchar
+<20> <0020>
+<21> <0021>
+<22> <0022>
+<23> <0023>
+<24> <0024>
+<25> <0025>
+<26> <0026>
+<27> <0027>
+<28> <0028>
+<29> <0029>
+<2A> <002A>
+<2B> <002B>
+<2C> <002C>
+<2D> <002D>
+<2E> <002E>
+<2F> <002F>
+<30> <0030>
+<31> <0031>
+<32> <0032>
+<33> <0033>
+<34> <0034>
+<35> <0035>
+<36> <0036>
+<37> <0037>
+<38> <0038>
+<39> <0039>
+<3A> <003A>
+<3B> <003B>
+<3C> <003C>
+<3D> <003D>
+<3E> <003E>
+<3F> <003F>
+<40> <0040>
+<41> <0041>
+<42> <0042>
+<43> <0043>
+<44> <0044>
+<45> <0045>
+<46> <0046>
+<47> <0047>
+<48> <0048>
+<49> <0049>
+<4A> <004A>
+<4B> <004B>
+<4C> <004C>
+<4D> <004D>
+<4E> <004E>
+<4F> <004F>
+<50> <0050>
+<51> <0051>
+<52> <0052>
+<53> <0053>
+<54> <0054>
+<55> <0055>
+<56> <0056>
+<57> <0057>
+<58> <0058>
+<59> <0059>
+<5A> <005A>
+<5B> <005B>
+<5C> <005C>
+<5D> <005D>
+<5E> <005E>
+<5F> <005F>
+<60> <0060>
+<61> <0061>
+<62> <0062>
+<63> <0063>
+<64> <0064>
+<65> <0065>
+<66> <0066>
+<67> <0067>
+<68> <0068>
+<69> <0069>
+<6A> <006A>
+<6B> <006B>
+<6C> <006C>
+<6D> <006D>
+<6E> <006E>
+<6F> <006F>
+<70> <0070>
+<71> <0071>
+<72> <0072>
+<73> <0073>
+<74> <0074>
+<75> <0075>
+<76> <0076>
+<77> <0077>
+<78> <0078>
+<79> <0079>
+<7A> <007A>
+<7B> <007B>
+<7C> <007C>
+<7D> <007D>
+<7E> <007E>
+endbfchar
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end
+
+endstream
+endobj
+9 0 obj
+<< /Length 1461 >>
+stream
+/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def
+/CMapName /Adobe-Identity-UCS def
+/CMapType 2 def
+1 begincodespacerange
+<00> <FF>
+endcodespacerange
+95 beginbfchar
+<20> <0020>
+<21> <0021>
+<22> <0022>
+<23> <0023>
+<24> <0024>
+<25> <0025>
+<26> <0026>
+<27> <0027>
+<28> <0028>
+<29> <0029>
+<2A> <002A>
+<2B> <002B>
+<2C> <002C>
+<2D> <002D>
+<2E> <002E>
+<2F> <002F>
+<30> <0030>
+<31> <0031>
+<32> <0032>
+<33> <0033>
+<34> <0034>
+<35> <0035>
+<36> <0036>
+<37> <0037>
+<38> <0038>
+<39> <0039>
+<3A> <003A>
+<3B> <003B>
+<3C> <003C>
+<3D> <003D>
+<3E> <003E>
+<3F> <003F>
+<40> <0040>
+<41> <0041>
+<42> <0042>
+<43> <0043>
+<44> <0044>
+<45> <0045>
+<46> <0046>
+<47> <0047>
+<48> <0048>
+<49> <0049>
+<4A> <004A>
+<4B> <004B>
+<4C> <004C>
+<4D> <004D>
+<4E> <004E>
+<4F> <004F>
+<50> <0050>
+<51> <0051>
+<52> <0052>
+<53> <0053>
+<54> <0054>
+<55> <0055>
+<56> <0056>
+<57> <0057>
+<58> <0058>
+<59> <0059>
+<5A> <005A>
+<5B> <005B>
+<5C> <005C>
+<5D> <005D>
+<5E> <005E>
+<5F> <005F>
+<60> <0060>
+<61> <0061>
+<62> <0062>
+<63> <0063>
+<64> <0064>
+<65> <0065>
+<66> <0066>
+<67> <0067>
+<68> <0068>
+<69> <0069>
+<6A> <006A>
+<6B> <006B>
+<6C> <006C>
+<6D> <006D>
+<6E> <006E>
+<6F> <006F>
+<70> <0070>
+<71> <0071>
+<72> <0072>
+<73> <0073>
+<74> <0074>
+<75> <0075>
+<76> <0076>
+<77> <0077>
+<78> <0078>
+<79> <0079>
+<7A> <007A>
+<7B> <007B>
+<7C> <007C>
+<7D> <007D>
+<7E> <007E>
+endbfchar
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end
+
+endstream
+endobj
+10 0 obj
+<< /Length 292 >>
+stream
+BT /F2 24 Tf 72 700 Td (ECRKE Seed Research Report) Tj ET
+BT /F1 11 Tf 72 676 Td (Hermetic seed run - all content is fictional research material.) Tj ET
+BT /F2 14 Tf 72 620 Td (Contents) Tj ET
+BT /F1 12 Tf 92 596 Td (1. Summary findings) Tj ET
+BT /F1 12 Tf 92 578 Td (2. Evidence table) Tj ET
+endstream
+endobj
+11 0 obj
+<< /Length 611 >>
+stream
+BT /F2 16 Tf 72 700 Td (1. Summary findings) Tj ET
+BT /F1 12 Tf 72 668 Td (Retailers report stronger same-store sales growth as e-commerce expands its share of) Tj ET
+BT /F1 12 Tf 72 650 Td (total retail spending. AI demand forecasting lowers retail inventory carrying costs by) Tj ET
+BT /F1 12 Tf 72 632 Td (improving demand prediction accuracy. Personalized product recommendations boost) Tj ET
+BT /F1 12 Tf 72 614 Td (retail conversion rates without degrading customer trust. The seed run generates this) Tj ET
+BT /F1 12 Tf 72 596 Td (report from two allowlisted sources with a deterministic pipeline.) Tj ET
+endstream
+endobj
+12 0 obj
+<< /Length 1122 >>
+stream
+BT /F2 16 Tf 72 700 Td (2. Evidence table) Tj ET
+1 0 0 1 72 640 cm
+0.90 0.92 0.95 rg 0 0 220 22 re f
+BT /F2 11 Tf 6 7 Td (Metric) Tj ET
+0.90 0.92 0.95 rg 220 0 90 22 re f
+BT /F2 11 Tf 226 7 Td (Value) Tj ET
+0.90 0.92 0.95 rg 310 0 158 22 re f
+BT /F2 11 Tf 316 7 Td (Source domain) Tj ET
+BT /F1 11 Tf 6 -15 Td (Decomposition coverage) Tj ET
+BT /F1 11 Tf 226 -15 Td (1.0) Tj ET
+BT /F1 11 Tf 316 -15 Td (retail.example.com) Tj ET
+BT /F1 11 Tf 6 -37 Td (Support ratio) Tj ET
+BT /F1 11 Tf 226 -37 Td (1.0) Tj ET
+BT /F1 11 Tf 316 -37 Td (retail.example.com) Tj ET
+BT /F1 11 Tf 6 -59 Td (Traceability) Tj ET
+BT /F1 11 Tf 226 -59 Td (1.0) Tj ET
+BT /F1 11 Tf 316 -59 Td (retail.example.com) Tj ET
+BT /F1 11 Tf 6 -81 Td (Contradiction recall) Tj ET
+BT /F1 11 Tf 226 -81 Td (1.0) Tj ET
+BT /F1 11 Tf 316 -81 Td (gold set) Tj ET
+0.6 0.6 0.6 RG 0 -88 m 0 0 l S
+0.6 0.6 0.6 RG 220 -88 m 220 0 l S
+0.6 0.6 0.6 RG 310 -88 m 310 0 l S
+0.6 0.6 0.6 RG 468 -88 m 468 0 l S
+0.6 0.6 0.6 RG 0 -88 m 468 -88 l S
+0.6 0.6 0.6 RG 0 -66 m 468 -66 l S
+0.6 0.6 0.6 RG 0 -44 m 468 -44 l S
+0.6 0.6 0.6 RG 0 -22 m 468 -22 l S
+0.6 0.6 0.6 RG 0 0 m 468 0 l S
+endstream
+endobj
+xref
+0 13
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000133 00000 n 
+0000000270 00000 n 
+0000000407 00000 n 
+0000000544 00000 n 
+0000000658 00000 n 
+0000000777 00000 n 
+0000002290 00000 n 
+0000003803 00000 n 
+0000004147 00000 n 
+0000004810 00000 n 
+trailer
+<< /Size 13 /Root 1 0 R >>
+startxref
+5985
+%%EOF

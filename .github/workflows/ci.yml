@@ -38,6 +38,20 @@ jobs:
       - name: Run tests
         run: pytest
 
+  eval-gate:
+    name: Eval gate (trust instrument)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Run hermetic eval suite
+        run: pytest tests/eval -o addopts="" -p no:warnings
+
   build:
     name: Build image
     runs-on: ubuntu-latest
