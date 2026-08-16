@@ -157,8 +157,7 @@ def test_gold_sets_load_and_are_schema_valid() -> None:
     assert any("retail" in q["question"].lower() for q in questions)
 
     contradictions = [
-        json.loads(line)
-        for line in (gold_dir / "contradictions.jsonl").read_text().splitlines()
+        json.loads(line) for line in (gold_dir / "contradictions.jsonl").read_text().splitlines()
     ]
     assert len(contradictions) >= 60
     confirmed = [c for c in contradictions if c["label"] == "confirmed"]

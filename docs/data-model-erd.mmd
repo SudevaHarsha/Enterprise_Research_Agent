@@ -1,0 +1,146 @@
+erDiagram
+    TENANT ||--o{ RUN : owns
+    RUN ||--o{ SOURCE : collects
+    RUN ||--o{ STATEMENT : produces
+    RUN ||--o{ FINDING : groups
+    RUN ||--o{ CONTRADICTION : records
+    RUN ||--o{ CONCLUSION : concludes
+    RUN ||--o{ CHECKPOINT : resumes
+    RUN ||--o{ AUDIT_TRACE : logs
+    SOURCE ||--o{ PASSAGE : contains
+    PASSAGE ||--o{ STATEMENT : yields
+    STATEMENT ||--o{ EVIDENCE_LINK : resolves_to
+    PASSAGE ||--o{ EVIDENCE_LINK : cited_by
+    FINDING ||--o{ FINDING_STATEMENT : contains
+    STATEMENT ||--o{ FINDING_STATEMENT : in
+    CONCLUSION ||--o{ CONCLUSION_EVIDENCE : cites
+    STATEMENT ||--o{ CONCLUSION_EVIDENCE : cited_by
+    CONTRADICTION }o--|| STATEMENT : "a vs"
+    CONTRADICTION }o--|| STATEMENT : "b vs"
+    KV_CACHE ||--o{ RUN : serves
+
+    TENANT {
+        uuid id PK
+        string name
+        string namespace UK
+        jsonb rbac_policy
+        timestamp created_at
+    }
+    RUN {
+        uuid id PK
+        uuid tenant_id FK
+        text question
+        string status "ck: submitted..cancelled"
+        string stage
+        float progress "ck: 0..1"
+        numeric cost_budget_usd
+        numeric cost_spent_usd "ck: >= 0"
+        jsonb checkpoint
+        timestamp created_at
+        timestamp updated_at
+        timestamp completed_at
+    }
+    SOURCE {
+        uuid id PK
+        uuid run_id FK
+        text uri
+        string title
+        string source_type "ck: web|pdf|rss|docx|rtf|upload|other"
+        timestamp fetched_at
+        string content_hash UK
+        string raw_ref
+        bool allowlisted_uri
+        string status "ck: pending..quarantined"
+    }
+    PASSAGE {
+        uuid id PK
+        uuid source_id FK
+        int seq "UK: source_id+seq"
+        text text
+        int start_char
+        int end_char
+        string hash
+    }
+    STATEMENT {
+        uuid id PK
+        uuid passage_id FK
+        uuid run_id FK
+        text text
+        string status "ck: draft|verified|quarantined"
+        float confidence "ck: 0..1"
+        timestamp created_at
+    }
+    EVIDENCE_LINK {
+        uuid id PK
+        uuid statement_id FK
+        uuid passage_id FK
+        uuid run_id FK
+        string score "ck: full|partial|none"
+        string method
+        timestamp created_at
+    }
+    FINDING {
+        uuid id PK
+        uuid run_id FK
+        string title
+        string evidence_tier "ck: t1|t2|t3|t4"
+        jsonb domain_tags
+        string stance
+        text summary
+        float confidence "ck: 0..1"
+        timestamp created_at
+    }
+    FINDING_STATEMENT {
+        uuid finding_id PK, FK
+        uuid statement_id PK, FK
+    }
+    CONTRADICTION {
+        uuid id PK
+        uuid run_id FK
+        uuid statement_a_id FK
+        uuid statement_b_id FK
+        string status "ck: flagged|confirmed|rejected"
+        jsonb evidence
+        timestamp created_at
+        timestamp confirmed_at
+    }
+    CONCLUSION {
+        uuid id PK
+        uuid run_id FK
+        text text
+        float confidence "ck: 0..1"
+        bool human_review_required
+        timestamp created_at
+    }
+    CONCLUSION_EVIDENCE {
+        uuid conclusion_id PK, FK
+        uuid statement_id PK, FK
+        uuid finding_id FK
+    }
+    AUDIT_TRACE {
+        uuid id PK
+        uuid run_id FK
+        string entity_type
+        string entity_id
+        string action
+        string actor
+        string decision
+        text reason
+        jsonb evidence
+        timestamp ts
+    }
+    CHECKPOINT {
+        uuid id PK
+        uuid run_id FK
+        string stage "UK: run_id+stage"
+        jsonb state
+        timestamp ts
+    }
+    KV_CACHE {
+        string key PK
+        string model
+        string prompt_hash
+        jsonb payload
+        timestamp created_at
+        timestamp expires_at
+    }

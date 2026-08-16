@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ECRKE data model ERD (task_015). Mirrors docs/data-model-erd.mmd (canonical).
+     Hand-crafted SVG fallback: rendered PNG requires a network-enabled
+     environment: npx @mermaid-js/mermaid-cli -i docs/data-model-erd.mmd -o docs/data-model-erd.png
+     Red boxes = append-only (evidence_links, audit_trace). 14 tables. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="880" viewBox="0 0 1440 880" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="earrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    </marker>
+    <style>
+      .tbl { stroke: #94a3b8; stroke-width: 1; }
+      .tblHeader { fill: #1e293b; }
+      .tblHeaderAppend { fill: #7f1d1d; }
+      .tblHeaderText { fill: #ffffff; font-size: 11.5px; font-weight: bold; }
+      .tblRow { fill: #ffffff; }
+      .tblRowAlt { fill: #f8fafc; }
+      .tblRowText { font-size: 10.5px; fill: #0f172a; }
+      .tblRowTextKey { font-size: 10.5px; fill: #0f172a; font-weight: bold; }
+      .rel { stroke: #64748b; stroke-width: 1.4; fill: none; marker-end: url(#earrow); }
+      .relLabel { font-size: 9.5px; fill: #475569; font-style: italic; }
+      .appendTag { font-size: 9px; fill: #b91c1c; font-weight: bold; }
+      .legend { font-size: 10.5px; fill: #334155; }
+    </style>
+  </defs>
+
+  <!-- ============ COLUMN 1 (40..340) ============ -->
+  <!-- tenants -->
+  <rect class="tbl" x="40" y="30" width="300" height="99" fill="#ffffff"/>
+  <rect class="tblHeader" x="40" y="30" width="300" height="24"/>
+  <text class="tblHeaderText" x="48" y="46">tenants</text>
+  <text class="tblRowTextKey" x="48" y="66">id · PK</text>
+  <text class="tblRowText" x="48" y="81">name</text>
+  <text class="tblRowText" x="48" y="96">namespace · UK</text>
+  <text class="tblRowText" x="48" y="111">rbac_policy · jsonb</text>
+  <text class="tblRowText" x="48" y="126">created_at</text>
+
+  <!-- runs -->
+  <rect class="tbl" x="40" y="180" width="300" height="204" fill="#ffffff"/>
+  <rect class="tblHeader" x="40" y="180" width="300" height="24"/>
+  <text class="tblHeaderText" x="48" y="196">runs</text>
+  <text class="tblRowTextKey" x="48" y="216">id · PK</text>
+  <text class="tblRowTextKey" x="48" y="231">tenant_id · FK</text>
+  <text class="tblRowText" x="48" y="246">question</text>
+  <text class="tblRowText" x="48" y="261">status · ck 15-state</text>
+  <text class="tblRowText" x="48" y="276">stage · 10-stage</text>
+  <text class="tblRowText" x="48" y="291">progress · ck 0..1</text>
+  <text class="tblRowText" x="48" y="306">cost_budget_usd</text>
+  <text class="tblRowText" x="48" y="321">cost_spent_usd · ck ≥0</text>
+  <text class="tblRowText" x="48" y="336">checkpoint · jsonb</text>
+  <text class="tblRowText" x="48" y="351">created_at · updated_at</text>
+  <text class="tblRowText" x="48" y="366">completed_at</text>
+
+  <!-- ============ COLUMN 2 (430..730) ============ -->
+  <!-- sources -->
+  <rect class="tbl" x="430" y="30" width="300" height="174" fill="#ffffff"/>
+  <rect class="tblHeader" x="430" y="30" width="300" height="24"/>
+  <text class="tblHeaderText" x="438" y="46">sources</text>
+  <text class="tblRowTextKey" x="438" y="66">id · PK</text>
+  <text class="tblRowTextKey" x="438" y="81">run_id · FK</text>
+  <text class="tblRowText" x="438" y="96">uri</text>
+  <text class="tblRowText" x="438" y="111">title</text>
+  <text class="tblRowText" x="438" y="126">source_type · ck</text>
+  <text class="tblRowText" x="438" y="141">fetched_at</text>
+  <text class="tblRowText" x="438" y="156">content_hash · UK</text>
+  <text class="tblRowText" x="438" y="171">raw_ref · allowlisted_uri</text>
+  <text class="tblRowText" x="438" y="186">status · ck 5-state</text>
+
+  <!-- passages -->
+  <rect class="tbl" x="430" y="250" width="300" height="129" fill="#ffffff"/>
+  <rect class="tblHeader" x="430" y="250" width="300" height="24"/>
+  <text class="tblHeaderText" x="438" y="266">passages</text>
+  <text class="tblRowTextKey" x="438" y="286">id · PK</text>
+  <text class="tblRowTextKey" x="438" y="301">source_id · FK</text>
+  <text class="tblRowText" x="438" y="316">seq · UK (source,seq)</text>
+  <text class="tblRowText" x="438" y="331">text</text>
+  <text class="tblRowText" x="438" y="346">start_char · end_char</text>
+  <text class="tblRowText" x="438" y="361">hash</text>
+
+  <!-- statements -->
+  <rect class="tbl" x="430" y="425" width="300" height="129" fill="#ffffff"/>
+  <rect class="tblHeader" x="430" y="425" width="300" height="24"/>
+  <text class="tblHeaderText" x="438" y="441">statements</text>
+  <text class="tblRowTextKey" x="438" y="461">id · PK</text>
+  <text class="tblRowTextKey" x="438" y="476">passage_id · FK</text>
+  <text class="tblRowTextKey" x="438" y="491">run_id · FK</text>
+  <text class="tblRowText" x="438" y="506">text</text>
+  <text class="tblRowText" x="438" y="521">status · ck draft|verified|quarantined</text>
+  <text class="tblRowText" x="438" y="536">confidence · ck 0..1</text>
+  <text class="tblRowText" x="438" y="551">created_at</text>
+
+  <!-- evidence_links (APPEND-ONLY) -->
+  <rect class="tbl" x="430" y="600" width="300" height="129" stroke="#b91c1c"/>
+  <rect class="tblHeaderAppend" x="430" y="600" width="300" height="24"/>
+  <text class="tblHeaderText" x="438" y="616">evidence_links  ⚠ APPEND-ONLY</text>
+  <text class="tblRowTextKey" x="438" y="636">id · PK</text>
+  <text class="tblRowTextKey" x="438" y="651">statement_id · FK</text>
+  <text class="tblRowTextKey" x="438" y="666">passage_id · FK</text>
+  <text class="tblRowTextKey" x="438" y="681">run_id · FK</text>
+  <text class="tblRowText" x="438" y="696">score · ck full|partial|none</text>
+  <text class="tblRowText" x="438" y="711">method · created_at</text>
+
+  <!-- ============ COLUMN 3 (840..1140) ============ -->
+  <!-- findings -->
+  <rect class="tbl" x="840" y="30" width="300" height="159" fill="#ffffff"/>
+  <rect class="tblHeader" x="840" y="30" width="300" height="24"/>
+  <text class="tblHeaderText" x="848" y="46">findings</text>
+  <text class="tblRowTextKey" x="848" y="66">id · PK</text>
+  <text class="tblRowTextKey" x="848" y="81">run_id · FK</text>
+  <text class="tblRowText" x="848" y="96">title</text>
+  <text class="tblRowText" x="848" y="111">evidence_tier · ck t1..t4</text>
+  <text class="tblRowText" x="848" y="126">domain_tags · jsonb</text>
+  <text class="tblRowText" x="848" y="141">stance · summary</text>
+  <text class="tblRowText" x="848" y="156">confidence · ck 0..1</text>
+  <text class="tblRowText" x="848" y="171">created_at</text>
+
+  <!-- finding_statements -->
+  <rect class="tbl" x="840" y="235" width="300" height="54" fill="#ffffff"/>
+  <rect class="tblHeader" x="840" y="235" width="300" height="24"/>
+  <text class="tblHeaderText" x="848" y="251">finding_statements · m2m</text>
+  <text class="tblRowTextKey" x="848" y="271">finding_id · PK/FK</text>
+  <text class="tblRowTextKey" x="848" y="286">statement_id · PK/FK</text>
+
+  <!-- contradictions -->
+  <rect class="tbl" x="840" y="335" width="300" height="144" fill="#ffffff"/>
+  <rect class="tblHeader" x="840" y="335" width="300" height="24"/>
+  <text class="tblHeaderText" x="848" y="351">contradictions</text>
+  <text class="tblRowTextKey" x="848" y="371">id · PK</text>
+  <text class="tblRowTextKey" x="848" y="386">run_id · FK</text>
+  <text class="tblRowTextKey" x="848" y="401">statement_a_id · FK</text>
+  <text class="tblRowTextKey" x="848" y="416">statement_b_id · FK</text>
+  <text class="tblRowText" x="848" y="431">status · ck flagged|confirmed|rejected</text>
+  <text class="tblRowText" x="848" y="446">evidence · jsonb</text>
+  <text class="tblRowText" x="848" y="461">created_at · confirmed_at</text>
+
+  <!-- conclusions -->
+  <rect class="tbl" x="840" y="525" width="300" height="114" fill="#ffffff"/>
+  <rect class="tblHeader" x="840" y="525" width="300" height="24"/>
+  <text class="tblHeaderText" x="848" y="541">conclusions</text>
+  <text class="tblRowTextKey" x="848" y="561">id · PK</text>
+  <text class="tblRowTextKey" x="848" y="576">run_id · FK</text>
+  <text class="tblRowText" x="848" y="591">text</text>
+  <text class="tblRowText" x="848" y="606">confidence · ck 0..1</text>
+  <text class="tblRowText" x="848" y="621">human_review_required</text>
+  <text class="tblRowText" x="848" y="636">created_at</text>
+
+  <!-- conclusion_evidence -->
+  <rect class="tbl" x="840" y="685" width="300" height="69" fill="#ffffff"/>
+  <rect class="tblHeader" x="840" y="685" width="300" height="24"/>
+  <text class="tblHeaderText" x="848" y="701">conclusion_evidence · m2m</text>
+  <text class="tblRowTextKey" x="848" y="721">conclusion_id · PK/FK</text>
+  <text class="tblRowTextKey" x="848" y="736">statement_id · PK/FK</text>
+  <text class="tblRowTextKey" x="848" y="751">finding_id · FK · null</text>
+
+  <!-- ============ COLUMN 4 (1180..1420) ============ -->
+  <!-- audit_trace (APPEND-ONLY) -->
+  <rect class="tbl" x="1180" y="30" width="240" height="174" stroke="#b91c1c"/>
+  <rect class="tblHeaderAppend" x="1180" y="30" width="240" height="24"/>
+  <text class="tblHeaderText" x="1188" y="46">audit_trace  ⚠ APPEND-ONLY</text>
+  <text class="tblRowTextKey" x="1188" y="66">id · PK</text>
+  <text class="tblRowTextKey" x="1188" y="81">run_id · FK</text>
+  <text class="tblRowText" x="1188" y="96">entity_type · entity_id</text>
+  <text class="tblRowText" x="1188" y="111">action · actor</text>
+  <text class="tblRowText" x="1188" y="126">decision · reason</text>
+  <text class="tblRowText" x="1188" y="141">evidence · jsonb</text>
+  <text class="tblRowText" x="1188" y="156">ts</text>
+
+  <!-- checkpoints -->
+  <rect class="tbl" x="1180" y="250" width="240" height="99" fill="#ffffff"/>
+  <rect class="tblHeader" x="1180" y="250" width="240" height="24"/>
+  <text class="tblHeaderText" x="1188" y="266">checkpoints</text>
+  <text class="tblRowTextKey" x="1188" y="286">id · PK</text>
+  <text class="tblRowTextKey" x="1188" y="301">run_id · FK</text>
+  <text class="tblRowText" x="1188" y="316">stage · UK (run,stage)</text>
+  <text class="tblRowText" x="1188" y="331">state · jsonb · ts</text>
+
+  <!-- kv_cache -->
+  <rect class="tbl" x="1180" y="395" width="240" height="114" fill="#ffffff"/>
+  <rect class="tblHeader" x="1180" y="395" width="240" height="24"/>
+  <text class="tblHeaderText" x="1188" y="411">kv_cache · standalone</text>
+  <text class="tblRowTextKey" x="1188" y="431">key · PK</text>
+  <text class="tblRowText" x="1188" y="446">model · prompt_hash</text>
+  <text class="tblRowText" x="1188" y="461">payload · jsonb</text>
+  <text class="tblRowText" x="1188" y="476">created_at · expires_at</text>
+
+  <!-- ============ RELATIONSHIPS ============ -->
+  <!-- tenants -> runs -->
+  <line class="rel" x1="190" y1="129" x2="190" y2="178"/>
+  <text class="relLabel" x="198" y="142">1</text>
+  <text class="relLabel" x="198" y="172">n · owns</text>
+
+  <!-- runs -> sources -->
+  <polyline class="rel" points="340,220 370,220 370,120 428,120"/>
+  <text class="relLabel" x="348" y="232">1</text>
+  <text class="relLabel" x="376" y="114">n · collects</text>
+
+  <!-- runs -> statements -->
+  <polyline class="rel" points="340,240 385,240 385,490 428,490"/>
+  <text class="relLabel" x="348" y="252">1</text>
+  <text class="relLabel" x="392" y="484">n</text>
+
+  <!-- runs -> evidence_links -->
+  <polyline class="rel" points="340,260 355,260 355,665 428,665"/>
+  <text class="relLabel" x="348" y="272">1</text>
+  <text class="relLabel" x="362" y="659">n</text>
+
+  <!-- runs -> findings -->
+  <polyline class="rel" points="340,280 400,280 400,220 820,220 820,110 838,110"/>
+  <text class="relLabel" x="348" y="292">1</text>
+  <text class="relLabel" x="806" y="118">n</text>
+
+  <!-- runs -> contradictions -->
+  <polyline class="rel" points="340,300 415,300 415,400 820,400 820,407 838,407"/>
+  <text class="relLabel" x="348" y="312">1</text>
+  <text class="relLabel" x="806" y="403">n</text>
+
+  <!-- runs -> conclusions -->
+  <polyline class="rel" points="340,320 425,320 425,575 760,575 760,582 838,582"/>
+  <text class="relLabel" x="348" y="332">1</text>
+  <text class="relLabel" x="770" y="578">n</text>
+
+  <!-- runs -> audit_trace -->
+  <polyline class="rel" points="340,340 370,340 370,780 1170,780 1170,120 1178,120"/>
+  <text class="relLabel" x="348" y="352">1</text>
+  <text class="relLabel" x="1156" y="128">n · logs</text>
+
+  <!-- runs -> checkpoints -->
+  <polyline class="rel" points="340,360 370,360 370,770 1160,770 1160,300 1178,300"/>
+  <text class="relLabel" x="348" y="372">1</text>
+  <text class="relLabel" x="1146" y="308">n · resumes</text>
+
+  <!-- sources -> passages -->
+  <line class="rel" x1="580" y1="204" x2="580" y2="248"/>
+  <text class="relLabel" x="588" y="216">1</text>
+  <text class="relLabel" x="588" y="242">n · contains</text>
+
+  <!-- passages -> statements -->
+  <line class="rel" x1="580" y1="379" x2="580" y2="423"/>
+  <text class="relLabel" x="588" y="391">1</text>
+  <text class="relLabel" x="588" y="417">n · yields</text>
+
+  <!-- statements -> evidence_links -->
+  <line class="rel" x1="580" y1="554" x2="580" y2="598"/>
+  <text class="relLabel" x="588" y="566">1</text>
+  <text class="relLabel" x="588" y="592">n · resolves to</text>
+
+  <!-- findings -> finding_statements -->
+  <line class="rel" x1="990" y1="189" x2="990" y2="233"/>
+  <text class="relLabel" x="998" y="201">1</text>
+  <text class="relLabel" x="998" y="227">n</text>
+
+  <!-- finding_statements -> statements (m2m) -->
+  <polyline class="rel" points="840,262 745,262 745,485 732,485"/>
+  <text class="relLabel" x="748" y="256">m</text>
+  <text class="relLabel" x="736" y="496">n</text>
+
+  <!-- contradictions.statement_a -> statements -->
+  <polyline class="rel" points="840,407 740,407 740,445 732,445"/>
+  <text class="relLabel" x="742" y="418">a</text>
+
+  <!-- contradictions.statement_b -> statements -->
+  <polyline class="rel" points="840,440 755,440 755,525 732,525"/>
+  <text class="relLabel" x="757" y="516">b</text>
+
+  <!-- conclusions -> conclusion_evidence -->
+  <line class="rel" x1="990" y1="639" x2="990" y2="683"/>
+  <text class="relLabel" x="998" y="651">1</text>
+  <text class="relLabel" x="998" y="677">n</text>
+
+  <!-- conclusion_evidence -> statements (m2m) -->
+  <polyline class="rel" points="840,719 770,719 770,565 732,565"/>
+  <text class="relLabel" x="776" y="712">m</text>
+  <text class="relLabel" x="736" y="572">n</text>
+
+  <!-- ============ LEGEND ============ -->
+  <rect class="tbl" x="40" y="800" width="1180" height="62" fill="#f8fafc"/>
+  <text class="legend" x="56" y="820">Legend — solid arrows are FK relationships (cardinality labeled). Red header = APPEND-ONLY table (enforced by ORM listeners in app/db/base.py + Postgres triggers; versioning by new rows, never in-place mutation).</text>
+  <text class="legend" x="56" y="838">kv_cache is standalone (repeat-call cache replacing Redis; serves any run). Select attributes shown — complete column lists in docs/data-model-erd.mmd and app/db/models.py.</text>
+  <text class="legend" x="56" y="856">Guarantees: no statement enters the KB unverified (draft → verified | quarantined); every conclusion links to evidence (conclusion_evidence); traceability statement → passage → source in ≤ 1 hop per edge.</text>
+</svg>

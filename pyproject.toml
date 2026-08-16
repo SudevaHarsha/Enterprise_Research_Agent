@@ -87,6 +87,9 @@ ignore = ["S101"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]
 "alembic/versions/*" = ["E501"]
+# License generator embeds long markdown table/prose rows that must stay
+# single-line (task_015) — same justification as alembic migrations.
+"scripts/generate_licenses.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"

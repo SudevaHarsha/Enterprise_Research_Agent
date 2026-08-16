@@ -2,6 +2,13 @@
 
 > Source of truth: `app/db/models.py`. Migrations: `alembic/versions/`.
 > Conceptual source: design doc `enterprise-research-agent-design.md` §7.
+> Canonical ERD: `docs/data-model-erd.mmd` (mermaid); rendered copy
+> `docs/data-model-erd.svg` (hand-crafted, viewable in any browser).
+> To produce a PNG (network-enabled environment only):
+>
+> ```powershell
+> npx --yes @mermaid-js/mermaid-cli -i docs/data-model-erd.mmd -o docs/data-model-erd.png
+> ```
 
 ## 1. The idea
 
@@ -199,13 +206,38 @@ erDiagram
 Consequence: runs that own append-only rows can never be hard-deleted (FK
 `RESTRICT`). That is intentional — provenance is tombstoned, never destroyed.
 
-## 6. Verification
+## 6. Enumerations (stored as strings + CheckConstraints)
+
+Enums live in `app/db/enums.py`; they are stored as plain strings with
+`CHECK` constraints so the schema stays migration-friendly while Python gets
+type-safe values.
+
+| Enum | Values | Where used |
+|---|---|---|
+| `RunStatus` | `submitted, planning, searching, collecting, storing, extracting, comparing, verifying, detecting, concluding, tracing, completed, failed, paused, cancelled` | `runs.status` (`valid_run_status`) |
+| `SourceType` | `web, pdf, rss, docx, rtf, upload, other` | `sources.source_type` (`valid_source_type`) |
+| `SourceStatus` | `pending, fetched, failed, normalized, quarantined` | `sources.status` (`valid_source_status`) |
+| `StatementStatus` | `draft, verified, quarantined` | `statements.status` (`valid_statement_status`) |
+| `EvidenceScore` | `full, partial, none` | `evidence_links.score` (`valid_evidence_score`) |
+| `ContradictionStatus` | `flagged, confirmed, rejected` | `contradictions.status` (`valid_contradiction_status`) |
+| `EvidenceTier` | `t1, t2, t3, t4` | `findings.evidence_tier` (`valid_evidence_tier`) |
+
+Stage names (pipeline order, `app/pipeline/context.py::STAGES`):
+
+```
+define → search → collect → store → extract → verify → find → detect → conclude → trace
+```
+
+Each stage maps to a `runs.status` surface value (`STAGE_STATUS`) and a progress
+value (`STAGE_PROGRESS`, 0.1 → 1.0 in 10 steps).
+
+## 7. Verification
 
 - `alembic upgrade head` on a fresh Postgres applies cleanly (14 tables, 20 FKs, 44 indexes, 2 triggers).
 - `pytest tests/test_database.py` (Testcontainers Postgres) asserts: migration applies,
   FK/index inventory, append-only at ORM + DB level, seed idempotency, model round-trips.
 
-## 7. Index strategy
+## 8. Index strategy
 
 | Index | Why |
 |---|---|

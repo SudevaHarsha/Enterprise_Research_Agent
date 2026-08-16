@@ -1,0 +1,48 @@
+flowchart TD
+    subgraph L1["L1 — Client / Evaluator"]
+        E["Evaluator / auditor<br/>REST client · curl · browser (OpenAPI)"]
+    end
+
+    subgraph L2["L2 — API / Control Layer (FastAPI)"]
+        API["FastAPI + Pydantic v2<br/>POST /v1/runs · GET /v1/runs/{id} · /stages · /conclusions<br/>/statements/{id}/trace · /contradictions · /report<br/>POST /resume · GET /kb/search · /audit"]
+        HZ["/healthz · /readyz · /metrics<br/>RFC 7807 errors · tenant scoping (X-Tenant-ID)"]
+    end
+
+    subgraph L3["L3 — Orchestration / Execution (Prefect 3 DAG)"]
+        DAG["research_pipeline — 10 stages<br/>define → search → collect → store → extract<br/>→ verify → find → detect → conclude → trace"]
+        CTL["Checkpoints · circuit breaker · cost meter<br/>retries · per-stage budgets (G-03)"]
+    end
+
+    subgraph L4R["L4a — Retrieval / Collection"]
+        RETR["Agentic retrieval loop (LangGraph)<br/>search API + RSS + URL · egress allowlist (G-06)<br/>fetcher + normalizer · content-hash dedupe"]
+    end
+
+    subgraph L4V["L4b — Verification / Audit"]
+        VER["Verify-first gate (G-02)<br/>deterministic support matrix + LLM judge<br/>draft → verified | quarantined"]
+        DET["Contradictions (flag-first → confirm-second)<br/>G-02 · G-11"]
+        CON["Conclude (verified-only + evidence links)<br/>one-sidedness check (G-07)"]
+    end
+
+    subgraph L5["L5 — Knowledge / Storage (PostgreSQL 16)"]
+        DB["Provenance core: tenants · runs · sources · passages<br/>statements · evidence_links (append-only) · findings<br/>contradictions · conclusions · audit_trace (append-only)<br/>checkpoints · kv_cache"]
+    end
+
+    subgraph L6["L6 — Observability"]
+        OBS["JSONL lifecycle events → Prometheus → Grafana<br/>OTel spans · /metrics (10 ecrke_ instruments)"]
+    end
+
+    E -->|submit / poll / trace| API
+    API -->|create/resume run| DAG
+    API --> HZ
+    DAG -->|stage tasks| CTL
+    DAG --> RETR
+    DAG --> VER
+    VER --> DET
+    DET --> CON
+    RETR -->|sources + passages| DB
+    VER -->|verified / quarantined statements| DB
+    DET -->|contradiction records| DB
+    CON -->|conclusions + evidence links| DB
+    CTL -->|checkpoints / cost / audit| DB
+    DAG -->|lifecycle events + metrics| OBS
+    OBS -->|scrape| API
