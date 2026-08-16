@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import os
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -20,7 +21,26 @@ import pytest
 from pydantic import BaseModel, Field
 
 from app.core.config import Settings
-from app.db.models import KVEntry, Passage, Run, Source
+
+# Task-run logs emitted outside a flow-run context cannot reach the Prefect API
+# logger; silence that warning (pipeline stage-unit tests await @task functions
+# directly). Must be set before any prefect module import.
+os.environ.setdefault("PREFECT_LOGGING_TO_API_WHEN_MISSING_FLOW", "ignore")
+from app.db.models import (
+    AuditTrace,
+    Checkpoint,
+    Conclusion,
+    ConclusionEvidence,
+    Contradiction,
+    EvidenceLink,
+    Finding,
+    FindingStatement,
+    KVEntry,
+    Passage,
+    Run,
+    Source,
+    Statement,
+)
 
 
 class SampleOutput(BaseModel):
@@ -105,6 +125,37 @@ class FakeClock:
         self._now += timedelta(seconds=seconds)
 
 
+_ID_MODELS: tuple[type[Any], ...] = (
+    Run,
+    Source,
+    Passage,
+    Statement,
+    EvidenceLink,
+    Finding,
+    Contradiction,
+    Conclusion,
+    AuditTrace,
+    Checkpoint,
+)
+_COMPOSITE_MODELS: tuple[type[Any], ...] = (FindingStatement, ConclusionEvidence)
+
+
+def _row_key(obj: Any) -> Any:
+    """Storage key for a supported ORM stand-in (id, KVEntry key, or composite PK)."""
+    if isinstance(obj, KVEntry):
+        return obj.key
+    if isinstance(obj, FindingStatement):
+        return (obj.finding_id, obj.statement_id)
+    if isinstance(obj, ConclusionEvidence):
+        return (obj.conclusion_id, obj.statement_id)
+    return obj.id
+
+
+def _is_supported(obj: Any) -> bool:
+    """True when ``obj`` is a model type this fake can store."""
+    return isinstance(obj, (KVEntry, *_ID_MODELS, *_COMPOSITE_MODELS))
+
+
 class FakeSession:
     """In-memory stand-in for ``AsyncSession`` covering the service surface used."""
 
@@ -126,12 +177,9 @@ class FakeSession:
         return self._storage.get(key)
 
     def add(self, obj: Any) -> None:
-        if isinstance(obj, KVEntry):
-            self._storage[obj.key] = obj
-        elif isinstance(obj, (Run, Source, Passage)):
-            self._storage[obj.id] = obj
-        else:
+        if not _is_supported(obj):
             raise TypeError(f"FakeSession.add does not support {type(obj).__name__}")
+        self._storage[_row_key(obj)] = obj
 
     async def commit(self) -> None:
         self.committed = True
@@ -140,29 +188,43 @@ class FakeSession:
         self.rolled_back = True
 
     async def delete(self, obj: Any) -> None:
-        if isinstance(obj, KVEntry):
-            self._storage.pop(obj.key, None)
-        elif isinstance(obj, (Run, Source, Passage)):
-            self._storage.pop(obj.id, None)
-        else:
+        if not _is_supported(obj):
             raise TypeError(f"FakeSession.delete does not support {type(obj).__name__}")
+        self._storage.pop(_row_key(obj), None)
 
     async def scalar(self, statement: Any) -> Any | None:
         """Minimal translator for ``select(Entity).where(Entity.col == value)``.
 
-        Covers the dedupe lookups used by the collectors; anything else raises
-        ``NotImplementedError`` so a real SQLAlchemy expression is never silently
-        mis-evaluated in tests.
+        Also evaluates compound ``and_(Entity.a == x, Entity.b == y)`` WHERE
+        clauses (used by the idempotence lookups in checkpoint/contradiction
+        stores). Anything else raises ``NotImplementedError`` so a real
+        SQLAlchemy expression is never silently mis-evaluated in tests.
         """
         descriptions = getattr(statement, "column_descriptions", None)
         whereclause = getattr(statement, "whereclause", None)
         if not descriptions or whereclause is None:
             raise NotImplementedError(
-                "FakeSession.scalar only supports select(Entity).where(Entity.col == value)"
+                "FakeSession.scalar only supports select(Entity).where(<equality>)"
             )
         entity = descriptions[0].get("entity")
         if entity is None:
             raise NotImplementedError("FakeSession.scalar: unsupported select entity")
+        clauses = getattr(whereclause, "clauses", None)
+        if clauses is not None:
+            conditions: list[tuple[str, Any]] = []
+            for clause in clauses:
+                column_key = getattr(getattr(clause, "left", None), "key", None)
+                if column_key is None:
+                    raise NotImplementedError(
+                        "FakeSession.scalar: unsupported compound WHERE clause"
+                    )
+                conditions.append((column_key, getattr(clause.right, "value", clause.right)))
+            for obj in self._storage.values():
+                if isinstance(obj, entity) and all(
+                    getattr(obj, key) == expected for key, expected in conditions
+                ):
+                    return obj
+            return None
         column = getattr(whereclause, "left", None)
         column_key = getattr(column, "key", None)
         if column_key is None:
@@ -172,6 +234,34 @@ class FakeSession:
             if isinstance(obj, entity) and getattr(obj, column_key) == expected:
                 return obj
         return None
+
+    async def scalars(self, statement: Any) -> list[Any]:
+        """Minimal translator for ``select(Entity).where(Entity.col.in_(values))``.
+
+        Also accepts ``== value``. Returns ALL matching rows so list-style
+        lookups (e.g. completed checkpoint stages) behave like SQL. Anything
+        else raises ``NotImplementedError``.
+        """
+        descriptions = getattr(statement, "column_descriptions", None)
+        whereclause = getattr(statement, "whereclause", None)
+        if not descriptions or whereclause is None:
+            raise NotImplementedError(
+                "FakeSession.scalars only supports select(Entity).where(Entity.col.in_(values))"
+            )
+        entity = descriptions[0].get("entity")
+        if entity is None:
+            raise NotImplementedError("FakeSession.scalars: unsupported select entity")
+        column = getattr(whereclause, "left", None)
+        column_key = getattr(column, "key", None)
+        if column_key is None:
+            raise NotImplementedError("FakeSession.scalars: unsupported WHERE column")
+        expected = getattr(whereclause.right, "value", whereclause.right)
+        values = expected if isinstance(expected, (list, tuple, set)) else [expected]
+        return [
+            obj
+            for obj in self._storage.values()
+            if isinstance(obj, entity) and getattr(obj, column_key) in values
+        ]
 
 
 class FakeSessionFactory:
@@ -188,6 +278,20 @@ class FakeSessionFactory:
 def fake_session_factory() -> FakeSessionFactory:
     """Fixture: fresh in-memory session factory per test."""
     return FakeSessionFactory()
+
+
+@pytest.fixture(scope="session")
+def prefect_harness() -> Any:
+    """Session-scoped hermetic Prefect environment (temp API, no network).
+
+    Lazy import keeps collection fast for tests that never touch Prefect. One
+    ~35s API-server boot per pytest process; all pipeline flow/stage tests in
+    the same process share it.
+    """
+    from prefect.testing.utilities import prefect_test_harness
+
+    with prefect_test_harness():
+        yield
 
 
 @pytest.fixture
