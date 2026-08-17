@@ -56,9 +56,15 @@ docker compose up -d            # postgres + prefect-server + api + worker
 docker compose --profile observability up -d   # + prometheus + grafana
 ```
 
+Open **http://localhost:3456/** for the web dashboard — submit a research
+question, watch the 10-stage pipeline execute in real time, and inspect
+conclusions with their provenance chains. The OpenAPI explorer is at
+**http://localhost:3456/docs**.
+
 | Service | Host URL | Notes |
 |---|---|---|
-| API | http://localhost:3456 | OpenAPI docs at `/docs`, health at `/healthz` |
+| Dashboard | http://localhost:3456/ | Web UI — submit questions, watch the pipeline, view results |
+| API | http://localhost:3456/docs | OpenAPI docs, interactive explorer |
 | Prefect server | http://localhost:4200 | Flow/run UI (set `PREFECT_API_URL` to use it) |
 | Prometheus | http://localhost:9090 | Scrapes `/metrics` (observability profile) |
 | Grafana | http://localhost:3000 | Provisioned ECRKE dashboard (observability profile) |
@@ -139,6 +145,7 @@ app/
   pipeline/    10-stage Prefect DAG, checkpoints, context contracts
   services/    Retrieval, collection, verification, contradiction, report, ...
   workers/     Prefect worker entrypoint
+static/        Web dashboard (HTML/CSS/JS) — served at /
 tests/         pytest suite (unit + eval harness + adversarial guardrails)
 sample_data/   Synthetic sources for evaluation (RSS, PDF, HTML, seeds)
 grafana/       Provisioned dashboard + datasources (observability profile)

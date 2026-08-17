@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECRKE — Evidence-Centric Research Knowledge Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── reset ────────────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+/* ── tokens ───────────────────────────────────────────────────────────── */
+:root {
+  --bg-root:    #060a13;
+  --bg-surface: #0c1220;
+  --bg-card:    #111827;
+  --bg-raised:  #1a2332;
+  --bg-input:   #0f172a;
+  --border:     #1e293b;
+  --border-hi:  #334155;
+  --text-1:     #e2e8f0;
+  --text-2:     #94a3b8;
+  --text-3:     #64748b;
+  --accent:     #3b82f6;
+  --accent-dim: #1e40af;
+  --green:      #22c55e;
+  --green-dim:  #166534;
+  --amber:      #f59e0b;
+  --amber-dim:  #92400e;
+  --red:        #ef4444;
+  --red-dim:    #991b1b;
+  --purple:     #a78bfa;
+  --cyan:       #22d3ee;
+  --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+}
+
+html { font-size: 15px; }
+body {
+  font-family: var(--sans);
+  background: var(--bg-root);
+  color: var(--text-1);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── noise overlay ────────────────────────────────────────────────────── */
+body::before {
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  opacity:.03;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── layout shell ─────────────────────────────────────────────────────── */
+.shell { position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:24px 28px 60px; }
+
+/* ── header ───────────────────────────────────────────────────────────── */
+.header {
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 0 28px;border-bottom:1px solid var(--border);margin-bottom:32px;
+}
+.header h1 {
+  font-family:var(--mono);font-size:1.15rem;font-weight:600;letter-spacing:-.02em;
+  color:var(--text-1);
+}
+.header h1 span { color:var(--accent); }
+.header-badge {
+  font-family:var(--mono);font-size:.72rem;font-weight:500;
+  color:var(--text-3);background:var(--bg-card);
+  border:1px solid var(--border);border-radius:100px;
+  padding:4px 12px;letter-spacing:.04em;text-transform:uppercase;
+}
+
+/* ── section titles ───────────────────────────────────────────────────── */
+.section-label {
+  font-family:var(--mono);font-size:.7rem;font-weight:600;
+  color:var(--text-3);text-transform:uppercase;letter-spacing:.1em;
+  margin-bottom:10px;
+}
+
+/* ── card ─────────────────────────────────────────────────────────────── */
+.card {
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:24px 28px;margin-bottom:24px;
+}
+.card-header {
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:16px;
+}
+.card-title {
+  font-size:.95rem;font-weight:600;color:var(--text-1);
+}
+
+/* ── form ─────────────────────────────────────────────────────────────── */
+.form-row { display:flex;gap:12px;align-items:stretch; }
+.form-input {
+  flex:1;font-family:var(--sans);font-size:.9rem;
+  background:var(--bg-input);color:var(--text-1);
+  border:1px solid var(--border);border-radius:var(--r-md);
+  padding:12px 16px;outline:none;transition:border-color .2s;
+}
+.form-input:focus { border-color:var(--accent); }
+.form-input::placeholder { color:var(--text-3); }
+.btn {
+  font-family:var(--mono);font-size:.8rem;font-weight:600;
+  letter-spacing:.03em;text-transform:uppercase;
+  border:none;border-radius:var(--r-md);cursor:pointer;
+  padding:12px 24px;transition:all .15s;white-space:nowrap;
+}
+.btn-primary {
+  background:var(--accent);color:#fff;
+}
+.btn-primary:hover { background:#2563eb; }
+.btn-primary:disabled { background:var(--accent-dim);color:var(--text-3);cursor:not-allowed; }
+.btn-secondary {
+  background:var(--bg-raised);color:var(--text-2);border:1px solid var(--border);
+}
+.btn-secondary:hover { border-color:var(--border-hi);color:var(--text-1); }
+.form-meta {
+  display:flex;gap:16px;margin-top:10px;
+}
+.form-meta label {
+  font-family:var(--mono);font-size:.72rem;color:var(--text-3);
+  display:flex;align-items:center;gap:6px;letter-spacing:.02em;
+}
+.form-meta input[type=number] {
+  width:70px;font-family:var(--mono);font-size:.78rem;
+  background:var(--bg-input);color:var(--text-2);
+  border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:4px 8px;outline:none;
+}
+.form-meta input[type=number]:focus { border-color:var(--accent); }
+
+/* ── pipeline ─────────────────────────────────────────────────────────── */
+.pipeline { display:flex;flex-direction:column;gap:6px; }
+.stage-row {
+  display:grid;grid-template-columns:32px 1fr 90px 100px;
+  align-items:center;gap:12px;
+  padding:10px 14px;border-radius:var(--r-md);
+  background:var(--bg-surface);border:1px solid transparent;
+  transition:all .25s;
+}
+.stage-row.active {
+  border-color:var(--accent);background:rgba(59,130,246,.06);
+}
+.stage-row.completed {
+  border-color:var(--green-dim);background:rgba(34,197,94,.04);
+}
+.stage-row.failed {
+  border-color:var(--red-dim);background:rgba(239,68,68,.04);
+}
+.stage-num {
+  font-family:var(--mono);font-size:.72rem;font-weight:600;
+  color:var(--text-3);text-align:center;
+}
+.stage-row.active .stage-num { color:var(--accent); }
+.stage-row.completed .stage-num { color:var(--green); }
+.stage-row.failed .stage-num { color:var(--red); }
+.stage-name {
+  font-size:.85rem;font-weight:500;color:var(--text-2);
+}
+.stage-row.active .stage-name { color:var(--text-1); }
+.stage-row.completed .stage-name { color:var(--green); }
+.stage-status {
+  font-family:var(--mono);font-size:.7rem;font-weight:500;
+  text-align:right;letter-spacing:.03em;text-transform:uppercase;
+}
+.stage-status.pending  { color:var(--text-3); }
+.stage-status.running  { color:var(--amber); }
+.stage-status.success  { color:var(--green); }
+.stage-status.failed   { color:var(--red); }
+.stage-bar {
+  height:4px;border-radius:2px;background:var(--border);overflow:hidden;
+}
+.stage-bar-fill {
+  height:100%;border-radius:2px;width:0%;transition:width .4s ease;
+}
+.stage-row.active .stage-bar-fill  { background:var(--accent); }
+.stage-row.completed .stage-bar-fill { background:var(--green); }
+.stage-row.failed .stage-bar-fill  { background:var(--red); }
+
+/* ── spinner ──────────────────────────────────────────────────────────── */
+@keyframes spin { to { transform:rotate(360deg); } }
+.spinner {
+  display:inline-block;width:14px;height:14px;
+  border:2px solid var(--border);border-top-color:var(--amber);
+  border-radius:50%;animation:spin .7s linear infinite;
+  vertical-align:middle;margin-right:6px;
+}
+
+/* ── progress overview ────────────────────────────────────────────────── */
+.progress-overview {
+  display:flex;align-items:center;gap:16px;margin-bottom:16px;
+  padding:12px 16px;background:var(--bg-surface);border-radius:var(--r-md);
+}
+.progress-bar-outer {
+  flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;
+}
+.progress-bar-inner {
+  height:100%;background:var(--accent);border-radius:4px;
+  width:0%;transition:width .5s ease;
+}
+.progress-text {
+  font-family:var(--mono);font-size:.78rem;color:var(--text-2);
+  min-width:80px;text-align:right;
+}
+.run-id-display {
+  font-family:var(--mono);font-size:.72rem;color:var(--text-3);
+  margin-bottom:8px;word-break:break-all;
+}
+.run-id-display strong { color:var(--text-2); }
+
+/* ── results ──────────────────────────────────────────────────────────── */
+.results-empty {
+  text-align:center;padding:40px 20px;color:var(--text-3);
+  font-size:.88rem;
+}
+.conclusion-card {
+  background:var(--bg-surface);border:1px solid var(--border);
+  border-radius:var(--r-md);padding:16px 20px;margin-bottom:10px;
+}
+.conclusion-card h4 {
+  font-size:.88rem;font-weight:600;color:var(--text-1);margin-bottom:8px;
+}
+.conclusion-card p {
+  font-size:.82rem;color:var(--text-2);line-height:1.65;
+}
+.evidence-toggle {
+  font-family:var(--mono);font-size:.7rem;color:var(--accent);
+  background:none;border:none;cursor:pointer;margin-top:8px;
+  letter-spacing:.03em;
+}
+.evidence-toggle:hover { text-decoration:underline; }
+.evidence-chain {
+  margin-top:10px;padding:12px 14px;background:var(--bg-card);
+  border-radius:var(--r-sm);border-left:3px solid var(--accent-dim);
+  font-size:.78rem;color:var(--text-3);line-height:1.7;
+  display:none;
+}
+.evidence-chain.open { display:block; }
+.evidence-chain strong { color:var(--text-2); }
+
+/* ── audit trail ──────────────────────────────────────────────────────── */
+.audit-table {
+  width:100%;border-collapse:collapse;font-size:.78rem;
+}
+.audit-table th {
+  font-family:var(--mono);font-size:.68rem;font-weight:600;
+  color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;
+  text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);
+}
+.audit-table td {
+  padding:8px 10px;border-bottom:1px solid rgba(30,41,59,.5);
+  color:var(--text-2);font-family:var(--mono);font-size:.74rem;
+  vertical-align:top;
+}
+.audit-table tr:hover td { background:rgba(59,130,246,.03); }
+.audit-decision {
+  display:inline-block;padding:2px 8px;border-radius:100px;
+  font-size:.68rem;font-weight:600;letter-spacing:.04em;
+}
+.audit-decision.success { background:var(--green-dim);color:var(--green); }
+.audit-decision.failed  { background:var(--red-dim);color:var(--red); }
+.audit-decision.pending { background:var(--amber-dim);color:var(--amber); }
+
+/* ── two-col layout ───────────────────────────────────────────────────── */
+.two-col { display:grid;grid-template-columns:1fr 1fr;gap:24px; }
+@media (max-width:800px) { .two-col { grid-template-columns:1fr; } }
+
+/* ── status bar ───────────────────────────────────────────────────────── */
+.status-bar {
+  position:fixed;bottom:0;left:0;right:0;z-index:10;
+  background:var(--bg-card);border-top:1px solid var(--border);
+  padding:8px 28px;display:flex;align-items:center;gap:20px;
+  font-family:var(--mono);font-size:.7rem;color:var(--text-3);
+}
+.status-dot {
+  width:7px;height:7px;border-radius:50%;background:var(--text-3);
+  display:inline-block;margin-right:6px;
+}
+.status-dot.ok   { background:var(--green); }
+.status-dot.busy { background:var(--amber); animation:pulse 1.5s ease infinite; }
+@keyframes pulse { 50% { opacity:.4; } }
+
+/* ── fade-in ──────────────────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity:0;transform:translateY(8px); }
+  to   { opacity:1;transform:translateY(0); }
+}
+.fade-in { animation:fadeUp .35s ease both; }
+
+/* ── scrollable audit ─────────────────────────────────────────────────── */
+.audit-scroll { max-height:340px;overflow-y:auto; }
+.audit-scroll::-webkit-scrollbar { width:6px; }
+.audit-scroll::-webkit-scrollbar-track { background:var(--bg-card); }
+.audit-scroll::-webkit-scrollbar-thumb { background:var(--border-hi);border-radius:3px; }
+
+/* ── hidden ───────────────────────────────────────────────────────────── */
+.hidden { display:none !important; }
+
+/* ── contradiction badge ──────────────────────────────────────────────── */
+.contradiction-badge {
+  display:inline-block;padding:2px 8px;border-radius:100px;
+  font-size:.68rem;font-weight:600;letter-spacing:.04em;
+  background:var(--amber-dim);color:var(--amber);margin-left:8px;
+}
+
+/* ── report render ────────────────────────────────────────────────────── */
+.report-render {
+  background:var(--bg-surface);border:1px solid var(--border);
+  border-radius:var(--r-md);padding:20px 24px;
+  font-size:.82rem;color:var(--text-2);line-height:1.75;
+  max-height:500px;overflow-y:auto;white-space:pre-wrap;
+}
+.report-render::-webkit-scrollbar { width:6px; }
+.report-render::-webkit-scrollbar-track { background:var(--bg-surface); }
+.report-render::-webkit-scrollbar-thumb { background:var(--border-hi);border-radius:3px; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── HEADER ──────────────────────────────────────────────────────── -->
+  <header class="header">
+    <h1><span>ECRKE</span>&ensp;Evidence-Centric Research Knowledge Engine</h1>
+    <span class="header-badge">v0.1.0</span>
+  </header>
+
+  <!-- ── SUBMIT ──────────────────────────────────────────────────────── -->
+  <div class="section-label">Submit Research Question</div>
+  <div class="card">
+    <div class="form-row">
+      <input id="question" class="form-input"
+             placeholder="Enter a research question…"
+             autofocus>
+      <button id="submitBtn" class="btn btn-primary" onclick="submitRun()">
+        Run Pipeline
+      </button>
+    </div>
+    <div class="form-meta">
+      <label>Budget $<input id="budget" type="number" value="2.0" min="0.1" step="0.5"></label>
+      <label>Tenant<input id="tenant" type="text" value="default" style="width:90px;font-family:var(--mono);font-size:.78rem;background:var(--bg-input);color:var(--text-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:4px 8px;outline:none;"></label>
+    </div>
+  </div>
+
+  <!-- ── PIPELINE ────────────────────────────────────────────────────── -->
+  <div id="pipelineSection" class="hidden">
+    <div class="section-label">Pipeline Execution</div>
+    <div class="card">
+      <div class="run-id-display" id="runIdDisplay"></div>
+      <div class="progress-overview">
+        <span id="statusLabel" style="font-family:var(--mono);font-size:.78rem;color:var(--text-2);">
+          <span class="spinner"></span> submitting…
+        </span>
+        <div class="progress-bar-outer">
+          <div class="progress-bar-inner" id="progressBar"></div>
+        </div>
+        <span class="progress-text" id="progressText">0%</span>
+      </div>
+      <div class="pipeline" id="pipeline"></div>
+    </div>
+  </div>
+
+  <!-- ── RESULTS ─────────────────────────────────────────────────────── -->
+  <div id="resultsSection" class="hidden">
+    <div class="two-col">
+
+      <!-- conclusions -->
+      <div>
+        <div class="section-label">Conclusions</div>
+        <div id="conclusionsContainer" class="card">
+          <div class="results-empty">Awaiting pipeline completion…</div>
+        </div>
+      </div>
+
+      <!-- audit trail -->
+      <div>
+        <div class="section-label">Audit Trail</div>
+        <div id="auditContainer" class="card">
+          <div class="results-empty">No audit entries yet.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- report -->
+    <div id="reportSection" class="hidden">
+      <div class="section-label">Generated Report</div>
+      <div id="reportContainer" class="card">
+        <div class="report-render" id="reportContent"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── STATUS BAR ──────────────────────────────────────────────────── -->
+<div class="status-bar">
+  <span><span class="status-dot" id="statusDot"></span> <span id="statusText">idle</span></span>
+  <span id="statusRunInfo"></span>
+  <span style="margin-left:auto" id="statusTime"></span>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   ECRKE Dashboard — vanilla JS, zero dependencies
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const STAGES = [
+  { key:'define',    label:'Define',          num:1  },
+  { key:'search',    label:'Search Plan',     num:2  },
+  { key:'collect',   label:'Collect Sources', num:3  },
+  { key:'store',     label:'Store & Index',   num:4  },
+  { key:'extract',   label:'Extract Claims',  num:5  },
+  { key:'verify',    label:'Verify Evidence',  num:6  },
+  { key:'find',      label:'Group Findings',   num:7  },
+  { key:'detect',    label:'Detect Contradictions', num:8 },
+  { key:'conclude',  label:'Conclude',         num:9  },
+  { key:'trace',     label:'Trace & Report',   num:10 },
+];
+
+let currentRunId = null;
+let pollTimer    = null;
+let startTime    = null;
+
+/* ── helpers ─────────────────────────────────────────────────────────── */
+const $ = s => document.getElementById(s);
+const API = () => {
+  const base = window.location.origin;
+  const tenant = $('tenant').value.trim() || 'default';
+  return { base, headers: { 'X-Tenant-ID': tenant, 'Content-Type': 'application/json' } };
+};
+
+function fmtTime(ms) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  return m > 0 ? `${m}m ${s % 60}s` : `${s}s`;
+}
+
+/* ── build pipeline stage rows ───────────────────────────────────────── */
+function buildPipeline() {
+  const el = $('pipeline');
+  el.innerHTML = STAGES.map(s => `
+    <div class="stage-row" id="stage-${s.key}">
+      <span class="stage-num">${String(s.num).padStart(2,'0')}</span>
+      <span class="stage-name">${s.label}</span>
+      <span class="stage-status pending" id="stage-status-${s.key}">pending</span>
+      <div class="stage-bar"><div class="stage-bar-fill" id="stage-bar-${s.key}"></div></div>
+    </div>
+  `).join('');
+}
+
+/* ── submit a run ────────────────────────────────────────────────────── */
+async function submitRun() {
+  const question = $('question').value.trim();
+  if (!question) { $('question').focus(); return; }
+
+  const btn = $('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Submitting…';
+
+  const { base, headers } = API();
+  const body = JSON.stringify({
+    question,
+    execute: true,
+    cost_budget_usd: parseFloat($('budget').value) || 2.0,
+  });
+
+  try {
+    const res = await fetch(`${base}/v1/runs`, { method:'POST', headers, body });
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({detail:res.statusText}));
+      alert(`Error ${res.status}: ${err.detail || JSON.stringify(err)}`);
+      return;
+    }
+    const run = await res.json();
+    currentRunId = run.run_id;
+    startTime = Date.now();
+
+    // show sections
+    $('pipelineSection').classList.remove('hidden');
+    $('resultsSection').classList.remove('hidden');
+    buildPipeline();
+
+    $('runIdDisplay').innerHTML = `<strong>Run</strong> ${currentRunId}`;
+    $('statusDot').className = 'status-dot busy';
+    $('statusText').textContent = 'running';
+    $('statusRunInfo').textContent = `question: "${question.slice(0,60)}${question.length>60?'…':''}"`;
+
+    btn.textContent = 'Running…';
+    startPolling();
+  } catch (e) {
+    alert(`Network error: ${e.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Run Pipeline';
+  }
+}
+
+/* ── polling ─────────────────────────────────────────────────────────── */
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(pollRun, 2000);
+  pollRun();
+}
+
+async function pollRun() {
+  if (!currentRunId) return;
+  const { base, headers } = API();
+
+  try {
+    // fetch run state + stages + audit in parallel
+    const [runRes, stagesRes, auditRes] = await Promise.all([
+      fetch(`${base}/v1/runs/${currentRunId}`, { headers }),
+      fetch(`${base}/v1/runs/${currentRunId}/stages`, { headers }),
+      fetch(`${base}/v1/runs/${currentRunId}/audit`, { headers }),
+    ]);
+
+    const run = runRes.ok ? await runRes.json() : null;
+    const stages = stagesRes.ok ? await stagesRes.json() : [];
+    const audit = auditRes.ok ? await auditRes.json() : [];
+
+    if (run) updatePipeline(run, stages);
+    if (audit && audit.rows) updateAudit(audit.rows);
+
+    // fetch conclusions + report when done
+    if (run && (run.status === 'completed' || run.status === 'failed')) {
+      await fetchResults(run);
+      stopPolling();
+    }
+  } catch (e) { /* network blip — keep polling */ }
+}
+
+/* ── update pipeline UI from run state ───────────────────────────────── */
+function updatePipeline(run, stages) {
+  const pct = Math.round((run.progress || 0) * 100);
+  $('progressBar').style.width = `${pct}%`;
+  $('progressText').textContent = `${pct}%`;
+
+  const statusLabel = $('statusLabel');
+  const terminal = run.status === 'completed' || run.status === 'failed';
+
+  if (!terminal) {
+    statusLabel.innerHTML = `<span class="spinner"></span> ${run.status}…`;
+  } else if (run.status === 'completed') {
+    statusLabel.innerHTML = `<span style="color:var(--green);">&#10003;</span> completed`;
+  } else {
+    statusLabel.innerHTML = `<span style="color:var(--red);">&#10007;</span> ${run.status}`;
+  }
+
+  // map stages from API to our display
+  const stageMap = {};
+  if (Array.isArray(stages)) {
+    stages.forEach(s => { stageMap[s.stage || s.name] = s; });
+  }
+
+  STAGES.forEach(s => {
+    const row = document.getElementById(`stage-${s.key}`);
+    const statusEl = document.getElementById(`stage-status-${s.key}`);
+    const barEl = document.getElementById(`stage-bar-${s.key}`);
+    const info = stageMap[s.key];
+
+    // reset
+    row.className = 'stage-row';
+
+    if (!info) {
+      statusEl.className = 'stage-status pending';
+      statusEl.textContent = 'pending';
+      barEl.style.width = '0%';
+    } else {
+      const st = (info.status || '').toLowerCase();
+      if (st === 'completed' || st === 'success') {
+        row.classList.add('completed');
+        statusEl.className = 'stage-status success';
+        statusEl.textContent = 'done';
+        barEl.style.width = '100%';
+      } else if (st === 'failed' || st === 'error') {
+        row.classList.add('failed');
+        statusEl.className = 'stage-status failed';
+        statusEl.textContent = 'failed';
+        barEl.style.width = '100%';
+      } else if (st === 'running' || st === 'pending' || st === 'queued') {
+        row.classList.add('active');
+        statusEl.className = 'stage-status running';
+        statusEl.textContent = 'running';
+        barEl.style.width = '55%';
+      } else {
+        statusEl.className = 'stage-status pending';
+        statusEl.textContent = st || 'pending';
+        barEl.style.width = '0%';
+      }
+    }
+  });
+}
+
+/* ── update audit trail ──────────────────────────────────────────────── */
+function updateAudit(rows) {
+  if (!rows || rows.length === 0) return;
+  const container = $('auditContainer');
+
+  const html = `
+    <div class="audit-scroll">
+      <table class="audit-table">
+        <thead><tr>
+          <th>Time</th><th>Action</th><th>Actor</th><th>Decision</th><th>Reason</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r => {
+            const dec = (r.decision || '').toLowerCase();
+            const cls = dec.includes('fail') ? 'failed'
+                      : dec.includes('success') || dec.includes('verified') ? 'success'
+                      : 'pending';
+            const ts = r.ts ? new Date(r.ts).toLocaleTimeString() : '—';
+            return `<tr>
+              <td>${ts}</td>
+              <td>${r.action || '—'}</td>
+              <td>${r.actor || '—'}</td>
+              <td><span class="audit-decision ${cls}">${r.decision || '—'}</span></td>
+              <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                  title="${(r.reason||'').replace(/"/g,'&quot;')}">${r.reason || '—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  container.innerHTML = html;
+}
+
+/* ── fetch conclusions + report on completion ────────────────────────── */
+async function fetchResults(run) {
+  const { base, headers } = API();
+
+  $('statusDot').className = run.status === 'completed' ? 'status-dot ok' : 'status-dot';
+  $('statusText').textContent = run.status;
+  if (startTime) $('statusRunInfo').textContent += ` — ${fmtTime(Date.now() - startTime)}`;
+
+  // conclusions
+  try {
+    const res = await fetch(`${base}/v1/runs/${currentRunId}/conclusions`, { headers });
+    if (res.ok) {
+      const data = await res.json();
+      renderConclusions(data);
+    }
+  } catch(e) {}
+
+  // report
+  try {
+    const res = await fetch(`${base}/v1/runs/${currentRunId}/report`, { headers });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.report || data.content) {
+        $('reportSection').classList.remove('hidden');
+        $('reportContent').textContent = data.report || data.content;
+      }
+    }
+  } catch(e) {}
+
+  // contradictions
+  try {
+    const res = await fetch(`${base}/v1/runs/${currentRunId}/contradictions`, { headers });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const container = $('conclusionsContainer');
+        const badge = document.createElement('div');
+        badge.className = 'conclusion-card fade-in';
+        badge.innerHTML = `<h4>Contradictions Detected <span class="contradiction-badge">${data.length}</span></h4>
+          <p style="font-size:.78rem;color:var(--text-3);">The pipeline flagged ${data.length} contradiction(s) between sources. These are shown in the audit trail above.</p>`;
+        container.appendChild(badge);
+      }
+    }
+  } catch(e) {}
+}
+
+/* ── render conclusions ──────────────────────────────────────────────── */
+function renderConclusions(data) {
+  const container = $('conclusionsContainer');
+  const items = Array.isArray(data) ? data : (data.conclusions || []);
+
+  if (items.length === 0) {
+    container.innerHTML = `<div class="results-empty">
+      Pipeline finished. No verified conclusions were produced.
+      ${currentRunId ? '<br>Check the audit trail for details.' : ''}
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = items.map((c, i) => {
+    const text = c.text || c.statement || c.content || JSON.stringify(c);
+    const evidence = c.evidence || c.evidence_links || c.sources || [];
+    const evidenceHtml = Array.isArray(evidence) && evidence.length > 0
+      ? `<button class="evidence-toggle" onclick="toggleEvidence(${i})">▸ show evidence chain (${evidence.length} link${evidence.length>1?'s':''})</button>
+         <div class="evidence-chain" id="evidence-${i}">
+           ${evidence.map(e => `<strong>→</strong> ${typeof e === 'string' ? e : (e.text || e.passage || e.source || JSON.stringify(e))}`).join('<br>')}
+         </div>`
+      : '';
+    return `<div class="conclusion-card fade-in">
+      <h4>Conclusion ${i+1}</h4>
+      <p>${text}</p>
+      ${evidenceHtml}
+    </div>`;
+  }).join('');
+}
+
+function toggleEvidence(i) {
+  const el = document.getElementById(`evidence-${i}`);
+  if (!el) return;
+  el.classList.toggle('open');
+  const btn = el.previousElementSibling;
+  if (btn) btn.textContent = el.classList.contains('open')
+    ? btn.textContent.replace('▸','▾')
+    : btn.textContent.replace('▾','▸');
+}
+
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
+/* ── enter key submits ───────────────────────────────────────────────── */
+$('question').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitRun(); }
+});
+
+/* ── clock ───────────────────────────────────────────────────────────── */
+setInterval(() => {
+  $('statusTime').textContent = new Date().toLocaleTimeString();
+}, 1000);
+
+/* ── initial status check ────────────────────────────────────────────── */
+(async () => {
+  try {
+    const { base } = API();
+    const res = await fetch(`${base}/readyz`);
+    const data = await res.json();
+    if (data.status === 'ready') {
+      $('statusDot').className = 'status-dot ok';
+      $('statusText').textContent = 'connected';
+    }
+  } catch(e) {
+    $('statusDot').className = 'status-dot';
+    $('statusText').textContent = 'disconnected';
+  }
+})();
+</script>
+</body>
+</html>

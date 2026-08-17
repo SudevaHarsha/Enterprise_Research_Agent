@@ -9,6 +9,7 @@ WORKDIR /app
 # Install project + dependencies first for layer caching
 COPY pyproject.toml README.md ./
 COPY app ./app
+COPY static ./static
 COPY scripts ./scripts
 COPY alembic.ini ./
 COPY alembic ./alembic

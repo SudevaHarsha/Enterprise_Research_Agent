@@ -15,10 +15,12 @@ import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from http import HTTPStatus
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app import __version__
 from app.api.health import router as health_router
@@ -92,8 +94,18 @@ def create_app() -> FastAPI:
     app.include_router(api_router)
     _register_exception_handlers(app)
 
-    @app.get("/")
-    async def root() -> dict[str, str]:
+    # ── Dashboard (UI) ──────────────────────────────────────────────────
+    _static_dir = Path(__file__).resolve().parent.parent / "static"
+    if _static_dir.is_dir():
+        app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
+
+    @app.get("/", include_in_schema=False)
+    async def root() -> FileResponse:
+        """Serve the ECRKE dashboard."""
+        return FileResponse(str(_static_dir / "index.html"))
+
+    @app.get("/api/info")
+    async def api_info() -> dict[str, str]:
         return {"service": "ecrke", "version": __version__}
 
     return app
