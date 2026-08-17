@@ -19,6 +19,19 @@ from app.services.audit_writer import AuditWriter
 from app.services.blob_store import make_blob_store
 from app.services.collectors.mock_search import mock_search
 from app.services.collectors.search import SearchConnector
+
+
+def _pick_search_fn(settings: Settings):
+    """Route to the correct search backend based on SEARCH_PROVIDER."""
+    provider = (settings.search_provider or "").strip().lower()
+    if provider == "mock":
+        return mock_search
+    if provider in ("web", "duckduckgo"):
+        from app.services.collectors.web_search import web_search
+
+        return web_search
+    # Default to mock if unknown provider.
+    return mock_search
 from app.services.contradiction_detector import ContradictionDetector
 from app.services.cost_meter import CostMeter
 from app.services.extractor import Extractor
@@ -55,9 +68,7 @@ def build_pipeline_services(
         allowlist=Allowlist.from_settings(settings),
         search_connector=SearchConnector.from_settings(
             settings,
-            search_fn=mock_search
-            if (settings.search_provider or "").strip().lower() == "mock"
-            else None,
+            search_fn=_pick_search_fn(settings),
         ),
         fetcher=Fetcher.from_settings(settings),
         blob_store=make_blob_store(settings),

@@ -203,11 +203,23 @@ class LLMGateway:
     ) -> Any:
         """Call the provider with exponential backoff on rate-limit errors.
 
-        Retries up to 3 times with delays of 15s, 30s, 60s. Rate-limit errors
-        are distinct from schema-validation errors (G-11): they are transient
-        provider constraints, not malformed outputs.
+        Retries up to 3 times with delays of 15s, 30s, 60s for **transient**
+        rate-limit errors (HTTP 429 with retry-after).  Quota exhaustion
+        (RESOURCE_EXHAUSTED / daily limit) is detected via the error message
+        and raised immediately — retrying a depleted quota just wastes time
+        and may trigger harder throttling.
+
+        Rate-limit errors are distinct from schema-validation errors (G-11):
+        they are transient provider constraints, not malformed outputs.
         """
         import litellm as _litellm
+
+        _QUOTA_EXHAUSTION_MARKERS = (
+            "RESOURCE_EXHAUSTED",
+            "exceeded your current quota",
+            "quota exceeded",
+            "exceeds your quota",
+        )
 
         max_rate_retries = 3
         for rate_attempt in range(max_rate_retries + 1):
@@ -216,6 +228,14 @@ class LLMGateway:
                     model=model, messages=messages, **call_kwargs
                 )
             except _litellm.exceptions.RateLimitError as exc:
+                msg = str(exc).lower()
+                # Quota exhaustion = daily limit hit — no point retrying.
+                if any(marker.lower() in msg for marker in _QUOTA_EXHAUSTION_MARKERS):
+                    logger.error(
+                        "quota_exhausted model=%s — daily limit hit, not retrying",
+                        model,
+                    )
+                    raise
                 if rate_attempt >= max_rate_retries:
                     logger.error(
                         "rate_limit_exhausted model=%s retries=%d", model, max_rate_retries

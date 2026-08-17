@@ -44,6 +44,7 @@ dependencies = [
     "pypdf>=5.1",
     "python-docx>=1.1",
     "striprtf>=0.0.26",
+    "ddgs>=9.0",
     # Structured output / performance
     "orjson>=3.10",
     # Observability

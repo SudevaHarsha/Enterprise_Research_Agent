@@ -36,6 +36,17 @@ class FetchedContent:
     fetched_at: datetime
 
 
+_DEFAULT_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/139.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
+
 class Fetcher:
     """Fetch a URI after allowlist + per-connector rate-limit checks (G-06)."""
 
@@ -50,7 +61,10 @@ class Fetcher:
         timeout_seconds: float = 30.0,
     ) -> None:
         self._allowlist = allowlist
-        self._client = client or httpx.AsyncClient(timeout=timeout_seconds)
+        self._client = client or httpx.AsyncClient(
+            timeout=timeout_seconds,
+            headers=_DEFAULT_HEADERS,
+        )
         self._clock = clock or (lambda: datetime.now(UTC))
         self._sleep_fn = sleep_fn or asyncio.sleep
         self._min_interval_seconds = min_interval_seconds
@@ -65,7 +79,10 @@ class Fetcher:
         """
         return cls(
             allowlist=Allowlist.from_settings(settings),
-            client=httpx.AsyncClient(timeout=settings.fetch_timeout_seconds),
+            client=httpx.AsyncClient(
+                timeout=settings.fetch_timeout_seconds,
+                headers=_DEFAULT_HEADERS,
+            ),
             min_interval_seconds=settings.fetch_min_interval_seconds,
             timeout_seconds=settings.fetch_timeout_seconds,
         )

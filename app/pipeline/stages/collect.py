@@ -99,6 +99,7 @@ async def run_collect(ctx: PipelineContext) -> StageResult:
     fetched = 0
     quarantined = 0
     failed = 0
+    seen_hashes: dict[str, str] = {}  # content_hash -> raw_ref (blob dedup)
     for uri in search_cp["urls"]:
         if uri in existing:
             continue
@@ -136,6 +137,11 @@ async def run_collect(ctx: PipelineContext) -> StageResult:
             )
             failed += 1
             continue
+        # Deduplicate by content_hash — different URLs may yield identical pages.
+        # Use content+uri hash so each source row gets a unique DB key while
+        # sharing the blob storage ref.
+        ch = content_hash(fetched_content.content)
+        content_key = content_hash(f"{ch}:{uri}".encode("utf-8"))
         decoded = _decode_content(fetched_content.content)
         if is_unsafe(decoded):
             await _record_source(
@@ -152,15 +158,20 @@ async def run_collect(ctx: PipelineContext) -> StageResult:
             quarantined += 1
             continue
         source_id = uuid4()
-        raw_ref = f"runs/{ctx.run_id}/sources/{source_id}"
-        await services.blob_store.put(raw_ref, fetched_content.content)
+        if ch in seen_hashes:
+            # Same content as a prior source — share the blob to avoid re-fetching.
+            raw_ref = seen_hashes[ch]
+        else:
+            raw_ref = f"runs/{ctx.run_id}/sources/{source_id}"
+            await services.blob_store.put(raw_ref, fetched_content.content)
+            seen_hashes[ch] = raw_ref
         await _record_source(
             ctx,
             uri=uri,
             source_type=classify_source(fetched_content.content_type, uri).value,
             status="fetched",
             allowlisted=True,
-            content_hash_value=content_hash(fetched_content.content),
+            content_hash_value=content_key,
             raw_ref=raw_ref,
             action="source.fetched",
             decision="fetched",

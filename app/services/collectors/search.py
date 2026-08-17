@@ -13,7 +13,7 @@ from collections.abc import Awaitable, Callable
 
 from app.core.config import Settings
 
-SUPPORTED_PROVIDERS: frozenset[str] = frozenset({"mock", "brave", "serpapi"})
+SUPPORTED_PROVIDERS: frozenset[str] = frozenset({"mock", "brave", "serpapi", "web", "duckduckgo"})
 
 
 class SearchProviderError(ValueError):
