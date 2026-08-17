@@ -1,4 +1,8 @@
-"""Stage 6 — verify: run the verify-first gate on every draft statement."""
+"""Stage 6 — verify: run the verify-first gate on draft statements.
+
+Caps at MAX_VERIFY statements per run to control LLM cost and latency.
+Remaining drafts stay as ``draft`` in the knowledge base for future runs.
+"""
 
 from __future__ import annotations
 
@@ -10,14 +14,16 @@ from sqlalchemy import select
 from app.db.models import Passage, Source, Statement
 from app.pipeline.context import PipelineContext, StageResult
 
+MAX_VERIFY = 50  # max statements to verify per run
+
 
 @task(name="pipeline.verify")
 async def run_verify(ctx: PipelineContext) -> StageResult:
-    """Verify each draft statement against its passage (verify-first gate).
+    """Verify up to MAX_VERIFY draft statements against their passages.
 
-    Loads all of the run's draft statements and resolves the passage map for
-    the run's sources (single query each — no N+1). The verifier promotes
-    drafts to ``verified`` (or ``quarantined``) and appends the evidence link.
+    Loads draft statements and resolves the passage map for the run's
+    sources (single query each — no N+1). The verifier promotes drafts
+    to ``verified`` (or ``quarantined``) and appends the evidence link.
 
     A 3-second delay between calls prevents bursting through provider rate
     limits (G-03: budget-aware call pacing).
@@ -34,20 +40,25 @@ async def run_verify(ctx: PipelineContext) -> StageResult:
                 else []
             )
         }
-        drafts = [
+        all_drafts = [
             statement
             for statement in await session.scalars(
                 select(Statement).where(Statement.run_id == ctx.run_id)
             )
             if statement.status == "draft"
         ]
+    drafts = all_drafts[:MAX_VERIFY]
+    skipped = len(all_drafts) - len(drafts)
     count = 0
     for idx, statement in enumerate(drafts):
         if idx > 0:
-            await asyncio.sleep(3)
+            await asyncio.sleep(5)
         passage = passages.get(statement.passage_id)
         if passage is None:
             continue
         await services.verifier.verify(statement, passage, ctx.run_id)
         count += 1
-    return StageResult(stage="verify", ok=True, detail={"verified": count})
+    detail: dict[str, int] = {"verified": count}
+    if skipped:
+        detail["skipped"] = skipped
+    return StageResult(stage="verify", ok=True, detail=detail)

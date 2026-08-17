@@ -201,16 +201,15 @@ class LLMGateway:
     async def _call_with_rate_limit_retry(
         self, model: str, messages: list[dict[str, Any]], call_kwargs: dict[str, Any]
     ) -> Any:
-        """Call the provider with exponential backoff on rate-limit errors.
+        """Call the provider with exponential backoff on transient errors.
 
-        Retries up to 3 times with delays of 15s, 30s, 60s for **transient**
-        rate-limit errors (HTTP 429 with retry-after).  Quota exhaustion
-        (RESOURCE_EXHAUSTED / daily limit) is detected via the error message
-        and raised immediately — retrying a depleted quota just wastes time
-        and may trigger harder throttling.
+        Retries up to 3 times with delays of 15s, 30s, 60s for:
+        - Rate-limit errors (HTTP 429) — unless quota is exhausted
+        - Service unavailable errors (HTTP 503) — transient provider overload
 
-        Rate-limit errors are distinct from schema-validation errors (G-11):
-        they are transient provider constraints, not malformed outputs.
+        Quota exhaustion (RESOURCE_EXHAUSTED / daily limit) is detected via
+        the error message and raised immediately — retrying a depleted quota
+        wastes time and may trigger harder throttling.
         """
         import litellm as _litellm
 
@@ -220,9 +219,13 @@ class LLMGateway:
             "quota exceeded",
             "exceeds your quota",
         )
+        _TRANSIENT_ERRORS = (
+            _litellm.exceptions.RateLimitError,
+            _litellm.exceptions.ServiceUnavailableError,
+        )
 
-        max_rate_retries = 3
-        for rate_attempt in range(max_rate_retries + 1):
+        max_retries = 3
+        for attempt in range(max_retries + 1):
             try:
                 return await self._provider(
                     model=model, messages=messages, **call_kwargs
@@ -236,17 +239,34 @@ class LLMGateway:
                         model,
                     )
                     raise
-                if rate_attempt >= max_rate_retries:
+                if attempt >= max_retries:
                     logger.error(
-                        "rate_limit_exhausted model=%s retries=%d", model, max_rate_retries
+                        "rate_limit_exhausted model=%s retries=%d", model, max_retries
                     )
                     raise
-                delay = [15.0, 30.0, 60.0][rate_attempt]
+                delay = [15.0, 30.0, 60.0][attempt]
                 logger.warning(
                     "rate_limit_hit model=%s attempt=%d/%d retry_in=%.1fs",
                     model,
-                    rate_attempt + 1,
-                    max_rate_retries + 1,
+                    attempt + 1,
+                    max_retries + 1,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+            except _litellm.exceptions.ServiceUnavailableError as exc:
+                if attempt >= max_retries:
+                    logger.error(
+                        "service_unavailable_exhausted model=%s retries=%d",
+                        model,
+                        max_retries,
+                    )
+                    raise
+                delay = [10.0, 20.0, 40.0][attempt]
+                logger.warning(
+                    "service_unavailable model=%s attempt=%d/%d retry_in=%.1fs",
+                    model,
+                    attempt + 1,
+                    max_retries + 1,
                     delay,
                 )
                 await asyncio.sleep(delay)

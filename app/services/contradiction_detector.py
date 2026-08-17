@@ -35,6 +35,7 @@ cumulative metrics log line.
 
 from __future__ import annotations
 
+import asyncio
 import re
 from collections.abc import Callable, Iterable
 from datetime import UTC, datetime
@@ -84,6 +85,11 @@ NEGATION_MARKERS = frozenset(
 )
 
 _TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
+
+# Rate-limit pacing: max candidate pairs to evaluate per run, and
+# inter-call delay to respect the Gemini 15 RPM free-tier quota.
+MAX_CONTRADICTION_PAIRS = 20
+CONTRADICTION_DELAY_SECONDS = 5
 
 _NEGATION_CONFIRM_REASON = (
     "deterministic negation signal: the statements share the same core content "
@@ -297,12 +303,16 @@ class ContradictionDetector:
         verified = [s for s in statements if s.status == StatementStatus.VERIFIED.value]
         pairs_considered = len(verified) * (len(verified) - 1) // 2
         candidates = candidate_pairs(verified)
+        # Cap to control LLM spend under 15 RPM Gemini quota.
+        candidates = candidates[:MAX_CONTRADICTION_PAIRS]
         flagged_count = 0
         confirmed_count = 0
         rejected_count = 0
         confirmed_rows: list[Contradiction] = []
 
-        for a, b in candidates:
+        for pair_idx, (a, b) in enumerate(candidates):
+            if pair_idx > 0:
+                await asyncio.sleep(CONTRADICTION_DELAY_SECONDS)
             a_text = redact_secrets(a.text)
             b_text = redact_secrets(b.text)
             if await self._confirmed_exists(session, a, b):

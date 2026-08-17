@@ -30,7 +30,7 @@ async def run_conclude(ctx: PipelineContext) -> StageResult:
                 select(Statement).where(Statement.run_id == ctx.run_id)
             )
             if statement.status == "verified"
-        ]
+        ][:30]  # cap to control LLM calls in report generation
         confirmed = [
             contradiction
             for contradiction in await session.scalars(
