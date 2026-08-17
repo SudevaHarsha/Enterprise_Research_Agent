@@ -160,6 +160,10 @@ class Verifier:
         run_id: UUID | str,
         force: bool,
     ) -> VerificationOutcome:
+        # Merge the detached statement into THIS session so status updates
+        # are tracked and persisted on commit.
+        statement = await session.merge(statement)
+
         if statement.status != StatementStatus.DRAFT.value and not force:
             return VerificationOutcome(decision=StatementStatus(statement.status), skipped=True)
 

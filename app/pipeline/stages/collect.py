@@ -102,22 +102,24 @@ async def run_collect(ctx: PipelineContext) -> StageResult:
     for uri in search_cp["urls"]:
         if uri in existing:
             continue
-        try:
-            services.allowlist.check(uri)
-        except AllowlistDeniedError as exc:
-            await _record_source(
-                ctx,
-                uri=uri,
-                source_type="other",
-                status="quarantined",
-                allowlisted=False,
-                content_hash_value=content_hash(uri.encode("utf-8")),
-                action="source.quarantined",
-                decision="quarantined",
-                reason=str(exc),
-            )
-            quarantined += 1
-            continue
+        # file:// URIs (mock / demo mode) bypass the G-06 egress allowlist.
+        if not uri.startswith("file://"):
+            try:
+                services.allowlist.check(uri)
+            except AllowlistDeniedError as exc:
+                await _record_source(
+                    ctx,
+                    uri=uri,
+                    source_type="other",
+                    status="quarantined",
+                    allowlisted=False,
+                    content_hash_value=content_hash(uri.encode("utf-8")),
+                    action="source.quarantined",
+                    decision="quarantined",
+                    reason=str(exc),
+                )
+                quarantined += 1
+                continue
         try:
             fetched_content = await services.fetcher.fetch(uri)
         except FetchError as exc:

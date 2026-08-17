@@ -103,7 +103,7 @@ class Source(UUIDMixin, Base):
 
     __tablename__ = "sources"
     __table_args__ = (
-        UniqueConstraint("content_hash", name="uq_sources_content_hash"),
+        UniqueConstraint("run_id", "content_hash", name="uq_sources_run_content_hash"),
         CheckConstraint(
             "source_type IN ('web','pdf','rss','docx','rtf','upload','other')",
             name="valid_source_type",

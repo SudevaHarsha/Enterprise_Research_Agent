@@ -4,6 +4,9 @@ Loads every ``fetched`` source of the run, pulls its raw bytes from the blob
 store, normalizes them (G-05 redaction applied at the text layer), chunks the
 text into passages, and marks the source ``normalized``. Passage hashes use
 the chunk text so already-stored chunks are skipped on resume (idempotent).
+
+Fix: use a single session for the entire stage to avoid detached-instance
+issues where source.status updates on a stale object are silently dropped.
 """
 
 from __future__ import annotations
@@ -22,6 +25,8 @@ from app.services.normalizer import content_hash
 async def run_store(ctx: PipelineContext) -> StageResult:
     """Normalize every fetched source and chunk it into Passage rows."""
     services = ctx.services
+
+    # Phase 1: collect source data + existing hashes in a read session.
     async with ctx.session_factory() as session:
         sources = [
             source
@@ -30,17 +35,23 @@ async def run_store(ctx: PipelineContext) -> StageResult:
         ]
         if not sources:
             return StageResult(stage="store", ok=True, detail={"passages": 0})
-        source_ids = [source.id for source in sources]
+        # Snapshot the data we need from detached objects before the session closes.
+        source_data = [
+            (s.id, s.raw_ref, s.source_type) for s in sources
+        ]
+        source_ids = [s.id for s in sources]
         stored_hashes = {
             passage.hash
             for passage in await session.scalars(
                 select(Passage).where(Passage.source_id.in_(source_ids))
             )
         }
+
+    # Phase 2: normalize, chunk, persist, and mark status — one commit per source.
     total = 0
-    for source in sources:
-        content = await services.blob_store.get(source.raw_ref or "")
-        text = services.normalizer.normalize(source.source_type, content)
+    for src_id, raw_ref, source_type in source_data:
+        content = await services.blob_store.get(raw_ref or "")
+        text = services.normalizer.normalize(source_type, content)
         chunks = services.normalizer.chunk_passages(text)
         async with ctx.session_factory() as session:
             for seq, chunk in enumerate(chunks):
@@ -50,7 +61,7 @@ async def run_store(ctx: PipelineContext) -> StageResult:
                 session.add(
                     Passage(
                         id=uuid4(),
-                        source_id=source.id,
+                        source_id=src_id,
                         seq=seq,
                         text=chunk.text,
                         start_char=chunk.start_char,
@@ -58,7 +69,10 @@ async def run_store(ctx: PipelineContext) -> StageResult:
                         hash=chunk_hash,
                     )
                 )
-            source.status = "normalized"
+            # Re-fetch the source in THIS session so status update is tracked.
+            source = await session.get(Source, src_id)
+            if source is not None:
+                source.status = "normalized"
             await session.commit()
         total += len(chunks)
     return StageResult(stage="store", ok=True, detail={"passages": total})

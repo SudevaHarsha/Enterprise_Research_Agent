@@ -14,6 +14,7 @@ answer data exclusively.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from collections.abc import Awaitable, Callable, Mapping
@@ -197,6 +198,39 @@ class LLMGateway:
         for hook in self._before_call_hooks:
             await hook(ctx)
 
+    async def _call_with_rate_limit_retry(
+        self, model: str, messages: list[dict[str, Any]], call_kwargs: dict[str, Any]
+    ) -> Any:
+        """Call the provider with exponential backoff on rate-limit errors.
+
+        Retries up to 3 times with delays of 15s, 30s, 60s. Rate-limit errors
+        are distinct from schema-validation errors (G-11): they are transient
+        provider constraints, not malformed outputs.
+        """
+        import litellm as _litellm
+
+        max_rate_retries = 3
+        for rate_attempt in range(max_rate_retries + 1):
+            try:
+                return await self._provider(
+                    model=model, messages=messages, **call_kwargs
+                )
+            except _litellm.exceptions.RateLimitError as exc:
+                if rate_attempt >= max_rate_retries:
+                    logger.error(
+                        "rate_limit_exhausted model=%s retries=%d", model, max_rate_retries
+                    )
+                    raise
+                delay = [15.0, 30.0, 60.0][rate_attempt]
+                logger.warning(
+                    "rate_limit_hit model=%s attempt=%d/%d retry_in=%.1fs",
+                    model,
+                    rate_attempt + 1,
+                    max_rate_retries + 1,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+
     @staticmethod
     def _build_messages(
         *,
@@ -321,8 +355,8 @@ class LLMGateway:
                 instruction = self._schema_instruction(response_model, attempt)
                 attempt_messages = [*base_messages, {"role": "system", "content": instruction}]
 
-            attempt_response = await self._provider(
-                model=model, messages=attempt_messages, **call_kwargs
+            attempt_response = await self._call_with_rate_limit_retry(
+                model=model, messages=attempt_messages, call_kwargs=call_kwargs
             )
             response = attempt_response
             content = _extract_content(response)

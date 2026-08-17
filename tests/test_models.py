@@ -85,7 +85,7 @@ def test_key_indexes_defined() -> None:
 
 def test_key_unique_constraints_defined() -> None:
     tables = Base.metadata.tables
-    assert "uq_sources_content_hash" in {c.name for c in tables["sources"].constraints}
+    assert "uq_sources_run_content_hash" in {c.name for c in tables["sources"].constraints}
     assert "uq_passages_source_seq" in {c.name for c in tables["passages"].constraints}
     assert "uq_checkpoints_run_stage" in {c.name for c in tables["checkpoints"].constraints}
 

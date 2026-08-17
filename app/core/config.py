@@ -66,8 +66,8 @@ class Settings(BaseSettings):
     llm_openai_api_key: SecretStr | None = None
     llm_anthropic_api_key: SecretStr | None = None
     llm_google_api_key: SecretStr | None = None
-    llm_model_cheap: str = "gemini/gemini-2.0-flash"
-    llm_model_strong: str = "gemini/gemini-2.0-pro"
+    llm_model_cheap: str = "gemini/gemini-3-flash-preview"
+    llm_model_strong: str = "gemini/gemini-3-flash-preview"
 
     # Search / retrieval
     search_api_provider: str = ""

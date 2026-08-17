@@ -71,9 +71,14 @@ class Fetcher:
         )
 
     async def fetch(self, uri: str, connector: str = "default") -> FetchedContent:
-        """Fetch ``uri`` after the allowlist gate and connector rate-limit check."""
+        """Fetch ``uri`` after the allowlist gate and connector rate-limit check.
+
+        Supports ``file://`` URIs for local mock/demo data (reads from disk).
+        """
         # G-06: default-deny — refuse BEFORE any network I/O.
-        self._allowlist.check(uri)
+        # Allow file:// URIs through for mock mode (no domain check needed).
+        if not uri.startswith("file://"):
+            self._allowlist.check(uri)
 
         now = self._clock()
         last = self._last_fetch_at.get(connector)
@@ -81,6 +86,32 @@ class Fetcher:
             elapsed = now.timestamp() - last
             if elapsed < self._min_interval_seconds:
                 await self._sleep_fn(self._min_interval_seconds - elapsed)
+
+        # Local file:// fetch (mock / demo mode)
+        if uri.startswith("file://"):
+            from pathlib import Path
+
+            file_path = Path(uri.removeprefix("file://"))
+            _exists = await asyncio.to_thread(file_path.exists)
+            if not _exists:
+                raise FetchError(f"local file {uri!r} not found")
+            content = await asyncio.to_thread(file_path.read_bytes)
+            suffix = file_path.suffix.lower()
+            content_type = {
+                ".html": "text/html",
+                ".txt": "text/plain",
+                ".rss": "application/rss+xml",
+                ".xml": "application/xml",
+                ".pdf": "application/pdf",
+                ".jsonl": "application/jsonl",
+            }.get(suffix, "application/octet-stream")
+            self._last_fetch_at[connector] = self._clock().timestamp()
+            return FetchedContent(
+                uri=uri,
+                content=content,
+                content_type=content_type,
+                fetched_at=self._clock(),
+            )
 
         response = await self._client.get(
             uri,

@@ -119,6 +119,10 @@ class PipelineContext:
         """Convenience: the bundle's session factory."""
         return self.services.session_factory
 
+    def __hash__(self) -> int:
+        """Hash on run_id only so Prefect task caching can serialize this."""
+        return hash(str(self.run_id))
+
 
 @dataclass(frozen=True)
 class StageResult:

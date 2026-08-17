@@ -86,6 +86,7 @@ class Extractor:
                 if not extraction.statements:
                     return []
                 rows: list[Statement] = []
+                link_statements: list[UUID] = []
                 for item in extraction.statements:
                     statement = Statement(
                         id=uuid4(),
@@ -97,10 +98,15 @@ class Extractor:
                     )
                     session.add(statement)
                     rows.append(statement)
+                    link_statements.append(statement.id)
+                # Flush so statement rows exist in DB before the FK-referencing
+                # evidence_links are inserted (avoids IntegrityError).
+                await session.flush()
+                for stmt_id in link_statements:
                     session.add(
                         EvidenceLink(
                             id=uuid4(),
-                            statement_id=statement.id,
+                            statement_id=stmt_id,
                             passage_id=passage.id,
                             run_id=run_id,
                             score=EvidenceScore.NONE.value,

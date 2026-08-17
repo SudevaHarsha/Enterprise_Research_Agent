@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from prefect import task
 from sqlalchemy import select
 
@@ -16,6 +18,9 @@ async def run_extract(ctx: PipelineContext) -> StageResult:
     Passages have no run_id column, so the source ids are resolved first
     (single query each — no N+1). Statements are skipped when an identical
     (passage_id, text) already exists so resume never duplicates extractions.
+
+    A 3-second delay between calls prevents bursting through provider rate
+    limits (G-03: budget-aware call pacing).
     """
     services = ctx.services
     async with ctx.session_factory() as session:
@@ -31,7 +36,9 @@ async def run_extract(ctx: PipelineContext) -> StageResult:
             )
         }
     count = 0
-    for passage in passages:
+    for idx, passage in enumerate(passages):
+        if idx > 0:
+            await asyncio.sleep(3)
         if (passage.id, passage.text) in existing:
             continue
         statements = await services.extractor.extract(passage, ctx.run_id)

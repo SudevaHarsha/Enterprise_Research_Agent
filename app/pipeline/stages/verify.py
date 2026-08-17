@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 from prefect import task
 from sqlalchemy import select
 
@@ -16,6 +18,9 @@ async def run_verify(ctx: PipelineContext) -> StageResult:
     Loads all of the run's draft statements and resolves the passage map for
     the run's sources (single query each — no N+1). The verifier promotes
     drafts to ``verified`` (or ``quarantined``) and appends the evidence link.
+
+    A 3-second delay between calls prevents bursting through provider rate
+    limits (G-03: budget-aware call pacing).
     """
     services = ctx.services
     async with ctx.session_factory() as session:
@@ -37,7 +42,9 @@ async def run_verify(ctx: PipelineContext) -> StageResult:
             if statement.status == "draft"
         ]
     count = 0
-    for statement in drafts:
+    for idx, statement in enumerate(drafts):
+        if idx > 0:
+            await asyncio.sleep(3)
         passage = passages.get(statement.passage_id)
         if passage is None:
             continue

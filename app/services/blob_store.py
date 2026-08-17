@@ -44,6 +44,7 @@ class LocalBlobStore:
         target = self._path_for(ref)
         if target.exists():
             return  # content-addressed: same ref => same bytes, already stored
+        target.parent.mkdir(parents=True, exist_ok=True)
         tmp = target.with_name(f".{target.name}.{os.getpid()}.tmp")
         tmp.write_bytes(content)
         os.replace(tmp, target)

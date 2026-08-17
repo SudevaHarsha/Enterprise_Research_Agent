@@ -66,8 +66,9 @@ def test_config_loads_with_defaults_when_no_env_file(
     assert settings.guardrail_unsafe_content_enabled is True
 
 
-def test_config_loads_from_env_file(tmp_path: Path) -> None:
+def test_config_loads_from_env_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """A valid ``.env`` file is honored without error."""
+    _clear_ecrke_env(monkeypatch)
     env_file = tmp_path / ".env"
     env_file.write_text(
         "APP_ENV=test\nLOG_LEVEL=DEBUG\nGUARDRAIL_EGRESS_ALLOWLIST_ENABLED=true\n",
@@ -107,8 +108,9 @@ def test_guardrail_disable_via_kwarg_raises(guardrail_field: str) -> None:
         Settings(**{guardrail_field: False})
 
 
-def test_guardrail_disable_via_env_file_raises(tmp_path: Path) -> None:
+def test_guardrail_disable_via_env_file_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """A ``.env`` file trying to disable a guardrail must raise (G-13)."""
+    _clear_ecrke_env(monkeypatch)
     env_file = tmp_path / ".env"
     env_file.write_text("GUARDRAIL_UNSAFE_CONTENT_ENABLED=off\n", encoding="utf-8")
     with pytest.raises(ValidationError):

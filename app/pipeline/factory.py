@@ -17,6 +17,7 @@ from app.pipeline.context import PipelineServices, SessionFactory
 from app.services.allowlist import Allowlist
 from app.services.audit_writer import AuditWriter
 from app.services.blob_store import make_blob_store
+from app.services.collectors.mock_search import mock_search
 from app.services.collectors.search import SearchConnector
 from app.services.contradiction_detector import ContradictionDetector
 from app.services.cost_meter import CostMeter
@@ -52,7 +53,12 @@ def build_pipeline_services(
         gateway=gateway,
         planner=Planner(gateway=gateway, session_factory=maker),
         allowlist=Allowlist.from_settings(settings),
-        search_connector=SearchConnector.from_settings(settings),
+        search_connector=SearchConnector.from_settings(
+            settings,
+            search_fn=mock_search
+            if (settings.search_provider or "").strip().lower() == "mock"
+            else None,
+        ),
         fetcher=Fetcher.from_settings(settings),
         blob_store=make_blob_store(settings),
         normalizer=Normalizer(),

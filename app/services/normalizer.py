@@ -219,7 +219,10 @@ def content_hash(content: bytes) -> str:
 
 _CONTENT_TYPE_MAP: tuple[tuple[str, SourceType], ...] = (
     ("text/html", SourceType.WEB),
+    ("text/plain", SourceType.WEB),
     ("application/xhtml", SourceType.WEB),
+    ("application/rss+xml", SourceType.WEB),
+    ("application/xml", SourceType.WEB),
     ("application/pdf", SourceType.PDF),
     ("application/rtf", SourceType.RTF),
     ("text/rtf", SourceType.RTF),
@@ -244,8 +247,8 @@ def classify_source(content_type: str, uri: str) -> SourceType:
     if path.endswith(".rtf"):
         return SourceType.RTF
     if path.endswith((".rss", ".atom", ".xml")):
-        return SourceType.RSS
-    return SourceType.OTHER
+        return SourceType.WEB
+    return SourceType.WEB  # fallback: treat unknown as web (plaintext → clean text)
 
 
 def contains_unsafe_content(text: str) -> bool:

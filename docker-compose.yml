@@ -56,6 +56,7 @@ services:
       context: .
       dockerfile: Dockerfile
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    env_file: .env
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://ecrke:ecrke_dev@postgres:5432/ecrke}
       APP_ENV: ${APP_ENV:-development}
@@ -102,10 +103,14 @@ services:
       context: .
       dockerfile: Dockerfile
     command: prefect worker start --pool research
+    env_file: .env
     environment:
       PREFECT_API_URL: http://prefect-server:4200/api
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://ecrke:ecrke_dev@postgres:5432/ecrke}
       SEARCH_PROVIDER: ${SEARCH_PROVIDER:-mock}
+      BLOB_STORE_DIR: /app/.blobs
+    volumes:
+      - blobs:/app/.blobs
     depends_on:
       prefect-server:
         condition: service_started
@@ -150,3 +155,4 @@ services:
 
 volumes:
   pgdata:
+  blobs:

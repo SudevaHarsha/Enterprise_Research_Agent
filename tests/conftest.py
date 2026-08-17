@@ -181,6 +181,14 @@ class FakeSession:
             raise TypeError(f"FakeSession.add does not support {type(obj).__name__}")
         self._storage[_row_key(obj)] = obj
 
+    async def merge(self, obj: Any) -> Any:
+        """No-op merge — returns the object as-is (fake session has no identity map)."""
+        return obj
+
+    async def flush(self) -> None:
+        """No-op flush — in-memory fake has nothing to push."""
+        return None
+
     async def commit(self) -> None:
         self.committed = True
 

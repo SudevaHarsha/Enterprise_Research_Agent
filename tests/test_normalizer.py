@@ -119,12 +119,12 @@ def test_classify_source_falls_back_to_uri_suffix() -> None:
     )
     assert (
         classify_source("application/octet-stream", "https://retail.example.com/a.atom").value
-        == "rss"
+        == "web"
     )
 
 
-def test_classify_source_unknown_is_other() -> None:
-    assert classify_source("", "https://retail.example.com/a").value == "other"
+def test_classify_source_unknown_is_web() -> None:
+    assert classify_source("", "https://retail.example.com/a").value == "web"
 
 
 def test_contains_unsafe_content_flags_unsafe_terms_case_insensitively() -> None:
