@@ -130,11 +130,16 @@ class Fetcher:
                 fetched_at=self._clock(),
             )
 
-        response = await self._client.get(
-            uri,
-            follow_redirects=False,
-            timeout=self._timeout_seconds,
-        )
+        try:
+            response = await self._client.get(
+                uri,
+                follow_redirects=False,
+                timeout=self._timeout_seconds,
+            )
+        except Exception as exc:
+            # Wrap SSL, connection, and timeout errors as FetchError so the
+            # collect stage's error handler catches them gracefully.
+            raise FetchError(f"fetch {uri!r} failed: {exc}") from exc
         self._last_fetch_at[connector] = self._clock().timestamp()
 
         if response.status_code != 200:

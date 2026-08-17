@@ -157,6 +157,10 @@ def _parse_json_lenient(content: str) -> dict[str, Any]:
 class LLMGateway:
     """Facade for LLM calls with tiering, caching, metering, and quarantine."""
 
+    # Global rate limiter: 15 RPM free-tier Gemini quota.
+    _MIN_CALL_INTERVAL = 60.0 / 15  # 4 seconds between calls
+    _call_timestamps: list[float] = []
+
     def __init__(
         self,
         settings: Settings | None = None,
@@ -225,11 +229,24 @@ class LLMGateway:
         )
 
         max_retries = 3
+        # Global rate limiter: ensure ≥ 4s between calls (15 RPM).
+        now = asyncio.get_event_loop().time()
+        if LLMGateway._call_timestamps:
+            elapsed = now - LLMGateway._call_timestamps[-1]
+            if elapsed < self._MIN_CALL_INTERVAL:
+                await asyncio.sleep(self._MIN_CALL_INTERVAL - elapsed)
         for attempt in range(max_retries + 1):
             try:
-                return await self._provider(
+                result = await self._provider(
                     model=model, messages=messages, **call_kwargs
                 )
+                LLMGateway._call_timestamps.append(asyncio.get_event_loop().time())
+                # Keep only last 60s of timestamps.
+                cutoff = asyncio.get_event_loop().time() - 60
+                LLMGateway._call_timestamps = [
+                    t for t in LLMGateway._call_timestamps if t > cutoff
+                ]
+                return result
             except _litellm.exceptions.RateLimitError as exc:
                 msg = str(exc).lower()
                 # Quota exhaustion = daily limit hit — no point retrying.
@@ -264,6 +281,23 @@ class LLMGateway:
                 delay = [10.0, 20.0, 40.0][attempt]
                 logger.warning(
                     "service_unavailable model=%s attempt=%d/%d retry_in=%.1fs",
+                    model,
+                    attempt + 1,
+                    max_retries + 1,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+            except _litellm.exceptions.APIConnectionError as exc:
+                if attempt >= max_retries:
+                    logger.error(
+                        "api_connection_error_exhausted model=%s retries=%d",
+                        model,
+                        max_retries,
+                    )
+                    raise
+                delay = [10.0, 20.0, 40.0][attempt]
+                logger.warning(
+                    "api_connection_error model=%s attempt=%d/%d retry_in=%.1fs",
                     model,
                     attempt + 1,
                     max_retries + 1,

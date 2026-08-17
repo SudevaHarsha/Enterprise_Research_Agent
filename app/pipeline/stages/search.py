@@ -14,8 +14,7 @@ async def run_search(ctx: PipelineContext) -> StageResult:
 
     Requires the ``research_plan:{run_id}`` kv_cache artifact produced by the
     define stage — a missing artifact raises ``ValueError`` BEFORE any search
-    connector call (a mis-sequenced stage fails fast instead of searching on
-    nothing).
+    connector call.
     """
     services = ctx.services
     plan_key = Planner.plan_key(ctx.run_id)

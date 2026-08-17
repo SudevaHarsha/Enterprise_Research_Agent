@@ -6,6 +6,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Install CA certs for HTTPS fetches in the slim image
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+
 # Install project + dependencies first for layer caching
 COPY pyproject.toml README.md ./
 COPY app ./app

@@ -14,7 +14,7 @@ from sqlalchemy import select
 from app.db.models import Passage, Source, Statement
 from app.pipeline.context import PipelineContext, StageResult
 
-MAX_VERIFY = 50  # max statements to verify per run
+MAX_VERIFY = 25  # max statements to verify per run
 
 
 @task(name="pipeline.verify")

@@ -88,7 +88,7 @@ _TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 
 # Rate-limit pacing: max candidate pairs to evaluate per run, and
 # inter-call delay to respect the Gemini 15 RPM free-tier quota.
-MAX_CONTRADICTION_PAIRS = 20
+MAX_CONTRADICTION_PAIRS = 10
 CONTRADICTION_DELAY_SECONDS = 5
 
 _NEGATION_CONFIRM_REASON = (

@@ -8,7 +8,7 @@ from sqlalchemy import select
 from app.db.models import Statement
 from app.pipeline.context import PipelineContext, StageResult
 
-MAX_DETECT_STATEMENTS = 30  # cap verified statements sent to detector
+MAX_DETECT_STATEMENTS = 15  # cap verified statements sent to detector
 
 
 @task(name="pipeline.detect")

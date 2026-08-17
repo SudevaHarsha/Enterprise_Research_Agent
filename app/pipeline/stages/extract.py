@@ -10,7 +10,7 @@ from sqlalchemy import select
 from app.db.models import Passage, Source, Statement
 from app.pipeline.context import PipelineContext, StageResult
 
-MAX_EXTRACT_PASSAGES = 20  # cap passages per run to control LLM cost
+MAX_EXTRACT_PASSAGES = 10  # cap passages per run to control LLM cost
 EXTRACT_DELAY_SECONDS = 5  # pacing: 15 RPM limit → ≥4s between calls
 
 
