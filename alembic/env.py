@@ -24,9 +24,11 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option(
-    "sqlalchemy.url", os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url") or "")
-)
+_raw_url = os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url") or "")
+# Ensure the asyncpg driver is present (Railway provides plain postgresql://)
+if _raw_url.startswith("postgresql://"):
+    _raw_url = _raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+config.set_main_option("sqlalchemy.url", _raw_url)
 
 target_metadata = Base.metadata
 
