@@ -17,6 +17,7 @@ COPY scripts ./scripts
 COPY sample_data ./sample_data
 COPY alembic.ini ./
 COPY alembic ./alembic
+ARG CACHE_BUST=1
 RUN pip install --upgrade pip && pip install .
 
 # Non-root user
