@@ -9,11 +9,11 @@ WORKDIR /app
 # Install CA certs for HTTPS fetches in the slim image
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies from requirements.txt for faster installs
+# Phase 1: Install Python dependencies first (best layer caching)
 COPY requirements.txt ./
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Copy application code
+# Phase 2: Copy all source code and config
 COPY app ./app
 COPY static ./static
 COPY scripts ./scripts
