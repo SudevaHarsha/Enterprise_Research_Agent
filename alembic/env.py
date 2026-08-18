@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import asyncio
 import os
+import ssl as _ssl
 from logging.config import fileConfig
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config, create_async_engine
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from alembic import context
 from app.db import models  # noqa: F401  (import to register tables on metadata)
@@ -25,10 +27,22 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 _raw_url = os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url") or "")
-# Ensure the asyncpg driver is present (Railway provides plain postgresql://)
+
+# Railway may supply postgresql:// — convert to asyncpg driver
 if _raw_url.startswith("postgresql://"):
     _raw_url = _raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+# asyncpg does NOT accept sslmode as a URL param — strip it
+parsed = urlparse(_raw_url)
+params = parse_qs(parsed.query)
+sslmode = params.pop("sslmode", [None])[0]
+_query = urlencode(params, doseq=True)
+_raw_url = urlunparse(parsed._replace(query=_query))
 config.set_main_option("sqlalchemy.url", _raw_url)
+
+# Determine SSL strategy from the original sslmode or Railway host
+_railway = "railway.internal" in _raw_url
+_use_ssl = sslmode in ("require", "prefer", "allow") or _railway
 
 target_metadata = Base.metadata
 
@@ -53,16 +67,17 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    import ssl as _ssl
-
     url = config.get_main_option("sqlalchemy.url")
     connect_args: dict = {}
-    if "railway.internal" in url:
-        # asyncpg needs explicit SSL context, not sslmode query param
+    if _use_ssl:
         ctx = _ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = _ssl.CERT_NONE
         connect_args["ssl"] = ctx
+    else:
+        # Explicitly disable SSL if not needed — prevents asyncpg default SSL attempts
+        connect_args["ssl"] = False
+
     connectable = create_async_engine(url, poolclass=None, connect_args=connect_args)
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
