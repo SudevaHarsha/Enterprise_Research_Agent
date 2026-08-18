@@ -28,6 +28,10 @@ _raw_url = os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url") or
 # Ensure the asyncpg driver is present (Railway provides plain postgresql://)
 if _raw_url.startswith("postgresql://"):
     _raw_url = _raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+# Railway Postgres requires SSL — add sslmode=require if not already present
+if "railway.internal" in _raw_url and "sslmode=" not in _raw_url:
+    sep = "&" if "?" in _raw_url else "?"
+    _raw_url += f"{sep}sslmode=require"
 config.set_main_option("sqlalchemy.url", _raw_url)
 
 target_metadata = Base.metadata

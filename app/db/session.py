@@ -19,8 +19,18 @@ from sqlalchemy.ext.asyncio import (
 DEFAULT_DATABASE_URL = "postgresql+asyncpg://ecrke:ecrke_dev@localhost:5433/ecrke"
 
 
+def _normalize_db_url(url: str) -> str:
+    """Ensure asyncpg driver and SSL for Railway connections."""
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    if "railway.internal" in url and "sslmode=" not in url:
+        sep = "&" if "?" in url else "?"
+        url += f"{sep}sslmode=require"
+    return url
+
+
 def build_engine(url: str | None = None) -> AsyncEngine:
-    db_url = url or os.getenv("DATABASE_URL") or DEFAULT_DATABASE_URL
+    db_url = _normalize_db_url(url or os.getenv("DATABASE_URL") or DEFAULT_DATABASE_URL)
     return create_async_engine(db_url, pool_pre_ping=True)
 
 
