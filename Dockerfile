@@ -20,7 +20,6 @@ COPY scripts ./scripts
 COPY sample_data ./sample_data
 COPY alembic.ini ./
 COPY alembic ./alembic
-RUN pip install -e . --no-deps
 
 # Non-root user
 RUN useradd --create-home --uid 1000 ecrke && chown -R ecrke:ecrke /app && mkdir -p /app/.blobs && chown -R ecrke:ecrke /app/.blobs
