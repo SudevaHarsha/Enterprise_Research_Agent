@@ -310,6 +310,88 @@ body::before {
   background:var(--amber-dim);color:var(--amber);margin-left:8px;
 }
 
+/* ── improved conclusions ────────────────────────────────────────────── */
+.conclusions-header {
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;margin-bottom:14px;
+  background:linear-gradient(135deg, rgba(59,130,246,.08), rgba(34,197,94,.05));
+  border:1px solid var(--border);border-radius:var(--r-md);
+}
+.conclusions-header h3 {
+  font-size:.9rem;font-weight:600;color:var(--text-1);margin:0;
+}
+.conclusions-stats {
+  display:flex;gap:16px;
+}
+.conclusions-stat {
+  display:flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:.72rem;color:var(--text-3);
+}
+.conclusions-stat .stat-num {
+  font-weight:600;color:var(--text-2);
+}
+.conclusion-card-improved {
+  position:relative;
+  background:var(--bg-surface);border:1px solid var(--border);
+  border-radius:var(--r-md);padding:18px 20px 16px 52px;
+  margin-bottom:12px;transition:all .2s;
+}
+.conclusion-card-improved:hover {
+  border-color:var(--border-hi);background:rgba(255,255,255,.01);
+}
+.conclusion-num {
+  position:absolute;top:16px;left:14px;
+  width:28px;height:28px;border-radius:50%;
+  background:var(--accent-dim);color:var(--accent);
+  font-family:var(--mono);font-size:.78rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+}
+.conclusion-card-improved .conclusion-text {
+  font-size:.86rem;color:var(--text-1);line-height:1.7;margin-bottom:10px;
+}
+.conclusion-meta {
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.confidence-badge {
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:100px;
+  font-family:var(--mono);font-size:.68rem;font-weight:600;
+  background:var(--green-dim);color:var(--green);letter-spacing:.02em;
+}
+.confidence-badge.high { background:var(--green-dim);color:var(--green); }
+.confidence-badge.medium { background:var(--amber-dim);color:var(--amber); }
+.confidence-badge.low { background:var(--red-dim);color:var(--red); }
+.source-count {
+  font-family:var(--mono);font-size:.68rem;color:var(--text-3);
+}
+.evidence-btn {
+  font-family:var(--mono);font-size:.68rem;color:var(--accent);
+  background:none;border:none;cursor:pointer;padding:3px 8px;
+  border-radius:var(--r-sm);transition:background .15s;
+}
+.evidence-btn:hover { background:rgba(59,130,246,.1); }
+.evidence-panel {
+  margin-top:12px;padding:14px 16px;
+  background:var(--bg-card);border-left:3px solid var(--accent-dim);
+  border-radius:0 var(--r-sm) var(--r-sm) 0;
+  font-size:.78rem;color:var(--text-3);line-height:1.7;
+  display:none;animation:fadeIn .2s ease;
+}
+.evidence-panel.open { display:block; }
+.evidence-panel .ev-item {
+  padding:6px 0;border-bottom:1px solid rgba(30,41,59,.4);
+}
+.evidence-panel .ev-item:last-child { border-bottom:none; }
+.evidence-panel .ev-src {
+  font-family:var(--mono);font-size:.68rem;color:var(--accent);
+  text-decoration:none;word-break:break-all;
+}
+.evidence-panel .ev-src:hover { text-decoration:underline; }
+.evidence-panel .ev-text {
+  color:var(--text-2);margin-top:3px;
+}
+@keyframes fadeIn { from { opacity:0;transform:translateY(-4px); } to { opacity:1;transform:translateY(0); } }
+
 /* ── report render ────────────────────────────────────────────────────── */
 .report-render {
   background:var(--bg-surface);border:1px solid var(--border);
@@ -558,6 +640,9 @@ function updatePipeline(run, stages) {
     stages.forEach(s => { stageMap[s.stage || s.name] = s; });
   }
 
+  // Determine the currently active stage: the current run stage
+  const currentStage = run.stage || '';
+
   STAGES.forEach(s => {
     const row = document.getElementById(`stage-${s.key}`);
     const statusEl = document.getElementById(`stage-status-${s.key}`);
@@ -567,32 +652,34 @@ function updatePipeline(run, stages) {
     // reset
     row.className = 'stage-row';
 
-    if (!info) {
-      statusEl.className = 'stage-status pending';
-      statusEl.textContent = 'pending';
-      barEl.style.width = '0%';
-    } else {
+    if (info && info.ts) {
+      // Stage has a timestamp — it ran. Determine if it's the current or already done.
       const st = (info.status || '').toLowerCase();
-      if (st === 'completed' || st === 'success') {
-        row.classList.add('completed');
-        statusEl.className = 'stage-status success';
-        statusEl.textContent = 'done';
-        barEl.style.width = '100%';
+      const isCurrentStage = (s.key === currentStage) && !terminal;
+
+      if (isCurrentStage && run.status !== 'completed' && run.status !== 'failed') {
+        // This is the stage currently executing
+        row.classList.add('active');
+        statusEl.className = 'stage-status running';
+        statusEl.textContent = 'running';
+        barEl.style.width = '55%';
       } else if (st === 'failed' || st === 'error') {
         row.classList.add('failed');
         statusEl.className = 'stage-status failed';
         statusEl.textContent = 'failed';
         barEl.style.width = '100%';
-      } else if (st === 'running' || st === 'pending' || st === 'queued') {
-        row.classList.add('active');
-        statusEl.className = 'stage-status running';
-        statusEl.textContent = 'running';
-        barEl.style.width = '55%';
       } else {
-        statusEl.className = 'stage-status pending';
-        statusEl.textContent = st || 'pending';
-        barEl.style.width = '0%';
+        // Stage completed (has timestamp and isn't the current active one)
+        row.classList.add('completed');
+        statusEl.className = 'stage-status success';
+        statusEl.textContent = 'done';
+        barEl.style.width = '100%';
       }
+    } else {
+      // Stage never ran
+      statusEl.className = 'stage-status pending';
+      statusEl.textContent = 'pending';
+      barEl.style.width = '0%';
     }
   });
 }
@@ -667,11 +754,22 @@ async function fetchResults(run) {
       const data = await res.json();
       if (data && data.length > 0) {
         const container = $('conclusionsContainer');
-        const badge = document.createElement('div');
-        badge.className = 'conclusion-card fade-in';
-        badge.innerHTML = `<h4>Contradictions Detected <span class="contradiction-badge">${data.length}</span></h4>
-          <p style="font-size:.78rem;color:var(--text-3);">The pipeline flagged ${data.length} contradiction(s) between sources. These are shown in the audit trail above.</p>`;
-        container.appendChild(badge);
+        // Insert contradiction warning card before the conclusion cards
+        const warningCard = document.createElement('div');
+        warningCard.className = 'conclusion-card-improved fade-in';
+        warningCard.style.borderColor = 'var(--amber-dim)';
+        warningCard.style.background = 'rgba(245,158,11,.04)';
+        warningCard.innerHTML = `<div class="conclusion-num" style="background:var(--amber-dim);color:var(--amber);">!</div>
+          <div class="conclusion-text" style="color:var(--amber);">
+            <strong>Contradictions Detected:</strong> ${data.length} conflict${data.length > 1 ? 's' : ''} found between sources.
+            Review the audit trail for details.
+          </div>`;
+        const header = container.querySelector('.conclusions-header');
+        if (header && header.nextSibling) {
+          container.insertBefore(warningCard, header.nextSibling);
+        } else {
+          container.appendChild(warningCard);
+        }
       }
     }
   } catch(e) {}
@@ -690,21 +788,64 @@ function renderConclusions(data) {
     return;
   }
 
-  container.innerHTML = items.map((c, i) => {
+  // Count evidence links across all conclusions
+  let totalEvidence = 0;
+  items.forEach(c => {
+    const ev = c.evidence || c.evidence_links || c.sources || [];
+    if (Array.isArray(ev)) totalEvidence += ev.length;
+  });
+
+  // Header with stats
+  let html = `<div class="conclusions-header">
+    <h3>Research Findings</h3>
+    <div class="conclusions-stats">
+      <div class="conclusions-stat"><span class="stat-num">${items.length}</span> conclusions</div>
+      <div class="conclusions-stat"><span class="stat-num">${totalEvidence}</span> evidence links</div>
+    </div>
+  </div>`;
+
+  // Conclusion cards
+  html += items.map((c, i) => {
     const text = c.text || c.statement || c.content || JSON.stringify(c);
+    const confidence = c.confidence != null ? Math.round(c.confidence * 100) : null;
     const evidence = c.evidence || c.evidence_links || c.sources || [];
-    const evidenceHtml = Array.isArray(evidence) && evidence.length > 0
-      ? `<button class="evidence-toggle" onclick="toggleEvidence(${i})">▸ show evidence chain (${evidence.length} link${evidence.length>1?'s':''})</button>
-         <div class="evidence-chain" id="evidence-${i}">
-           ${evidence.map(e => `<strong>→</strong> ${typeof e === 'string' ? e : (e.text || e.passage || e.source || JSON.stringify(e))}`).join('<br>')}
-         </div>`
-      : '';
-    return `<div class="conclusion-card fade-in">
-      <h4>Conclusion ${i+1}</h4>
-      <p>${text}</p>
-      ${evidenceHtml}
+
+    // Confidence badge
+    let confBadge = '';
+    if (confidence != null) {
+      const cls = confidence >= 80 ? 'high' : confidence >= 50 ? 'medium' : 'low';
+      confBadge = `<span class="confidence-badge ${cls}">${confidence}% confidence</span>`;
+    }
+
+    // Evidence panel
+    let evidenceHtml = '';
+    if (Array.isArray(evidence) && evidence.length > 0) {
+      const evItems = evidence.map(e => {
+        const evText = typeof e === 'string' ? e : (e.text || e.passage || e.source || JSON.stringify(e));
+        const evSrc = typeof e === 'object' && e.url ? e.url : null;
+        return `<div class="ev-item">
+          ${evSrc ? `<a class="ev-src" href="${evSrc}" target="_blank" rel="noopener">${evSrc}</a>` : ''}
+          <div class="ev-text">${evText.substring(0, 200)}${evText.length > 200 ? '…' : ''}</div>
+        </div>`;
+      }).join('');
+
+      evidenceHtml = `
+        <button class="evidence-btn" onclick="toggleEvidence(${i})">▸ Evidence (${evidence.length})</button>
+        <div class="evidence-panel" id="evidence-${i}">${evItems}</div>`;
+    }
+
+    return `<div class="conclusion-card-improved fade-in">
+      <div class="conclusion-num">${i + 1}</div>
+      <div class="conclusion-text">${text}</div>
+      <div class="conclusion-meta">
+        ${confBadge}
+        ${evidence.length > 0 ? `<span class="source-count">${evidence.length} source${evidence.length > 1 ? 's' : ''}</span>` : ''}
+        ${evidenceHtml}
+      </div>
     </div>`;
   }).join('');
+
+  container.innerHTML = html;
 }
 
 function toggleEvidence(i) {
@@ -712,9 +853,12 @@ function toggleEvidence(i) {
   if (!el) return;
   el.classList.toggle('open');
   const btn = el.previousElementSibling;
-  if (btn) btn.textContent = el.classList.contains('open')
-    ? btn.textContent.replace('▸','▾')
-    : btn.textContent.replace('▾','▸');
+  if (btn) {
+    const isOpen = el.classList.contains('open');
+    btn.textContent = isOpen
+      ? btn.textContent.replace('▸', '▾')
+      : btn.textContent.replace('▾', '▸');
+  }
 }
 
 function stopPolling() {
