@@ -9,16 +9,18 @@ WORKDIR /app
 # Install CA certs for HTTPS fetches in the slim image
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# Install project + dependencies first for layer caching
-COPY pyproject.toml README.md ./
+# Install dependencies from requirements.txt for faster installs
+COPY requirements.txt ./
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
+# Copy application code
 COPY app ./app
 COPY static ./static
 COPY scripts ./scripts
 COPY sample_data ./sample_data
 COPY alembic.ini ./
 COPY alembic ./alembic
-ARG CACHE_BUST=1
-RUN pip install --upgrade pip && pip install .
+RUN pip install -e . --no-deps
 
 # Non-root user
 RUN useradd --create-home --uid 1000 ecrke && chown -R ecrke:ecrke /app && mkdir -p /app/.blobs && chown -R ecrke:ecrke /app/.blobs
