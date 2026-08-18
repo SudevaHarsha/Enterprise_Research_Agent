@@ -28,10 +28,6 @@ _raw_url = os.getenv("DATABASE_URL", config.get_main_option("sqlalchemy.url") or
 # Ensure the asyncpg driver is present (Railway provides plain postgresql://)
 if _raw_url.startswith("postgresql://"):
     _raw_url = _raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-# Railway Postgres requires SSL — add sslmode=require if not already present
-if "railway.internal" in _raw_url and "sslmode=" not in _raw_url:
-    sep = "&" if "?" in _raw_url else "?"
-    _raw_url += f"{sep}sslmode=require"
 config.set_main_option("sqlalchemy.url", _raw_url)
 
 target_metadata = Base.metadata
@@ -57,8 +53,17 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
+    import ssl as _ssl
+
     url = config.get_main_option("sqlalchemy.url")
-    connectable = create_async_engine(url, poolclass=None)
+    connect_args: dict = {}
+    if "railway.internal" in url:
+        # asyncpg needs explicit SSL context, not sslmode query param
+        ctx = _ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = _ssl.CERT_NONE
+        connect_args["ssl"] = ctx
+    connectable = create_async_engine(url, poolclass=None, connect_args=connect_args)
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
     await connectable.dispose()

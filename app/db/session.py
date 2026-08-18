@@ -20,18 +20,23 @@ DEFAULT_DATABASE_URL = "postgresql+asyncpg://ecrke:ecrke_dev@localhost:5433/ecrk
 
 
 def _normalize_db_url(url: str) -> str:
-    """Ensure asyncpg driver and SSL for Railway connections."""
+    """Ensure asyncpg driver for PostgreSQL connections."""
     if url.startswith("postgresql://"):
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    if "railway.internal" in url and "sslmode=" not in url:
-        sep = "&" if "?" in url else "?"
-        url += f"{sep}sslmode=require"
     return url
 
 
 def build_engine(url: str | None = None) -> AsyncEngine:
+    import ssl as _ssl
+
     db_url = _normalize_db_url(url or os.getenv("DATABASE_URL") or DEFAULT_DATABASE_URL)
-    return create_async_engine(db_url, pool_pre_ping=True)
+    connect_args: dict = {}
+    if "railway.internal" in db_url:
+        ctx = _ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = _ssl.CERT_NONE
+        connect_args["ssl"] = ctx
+    return create_async_engine(db_url, pool_pre_ping=True, connect_args=connect_args)
 
 
 def build_session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
